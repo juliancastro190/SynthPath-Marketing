@@ -40,8 +40,10 @@ before starting work in a new session.
   the debug/fallback path). Push-to-talk voice added in Tier 3 — hold a key,
   speak, release. Wake-word/open-mic is a later stretch goal, not baseline.
 - **Speech-to-text:** Deepgram, behind its own seam.
-- **Text-to-speech:** ElevenLabs, behind its own seam, streamed. Voice choice
-  is TBD — decide when we reach Tier 3, store it in the Tier 6 config file.
+- **Text-to-speech:** ElevenLabs, behind its own seam, streamed. Defaulted
+  to ElevenLabs' premade "Rachel" voice (`ELEVENLABS_VOICE_ID` in `.env`)
+  as a placeholder — swap it for a real preference whenever you pick one;
+  it moves into the Tier 6 config file once that exists.
 - **Never without asking first (hard confirmation gate, Tier 6):**
   - Sending any message (email, text, etc.)
   - Spending money
@@ -71,7 +73,7 @@ before starting work in a new session.
 - [x] Tier 0 — Interview / spec (this file)
 - [x] Tier 1 — Brain: text conversation loop
 - [x] Tier 2 — Hands: tool registry + first tools
-- [ ] Tier 3 — Ears/mouth: push-to-talk voice
+- [x] Tier 3 — Ears/mouth: push-to-talk voice
 - [ ] Tier 4 — Memory: durable facts across restarts
 - [ ] Tier 5 — Heartbeat: proactive background loop
 - [ ] Tier 6 — Rails: confirmation gate, config, audit log, kill switch
