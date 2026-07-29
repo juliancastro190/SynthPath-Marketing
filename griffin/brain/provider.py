@@ -1,6 +1,6 @@
 """The provider seam: the only place that talks to the model SDK directly.
 
-Everything else in the harness calls `stream_reply` and never touches the
+Everything else in the harness calls `run_turn` and never touches the
 Anthropic client. This is what lets the model/provider change, retries get
 added, or costs get logged in one place later.
 """
@@ -32,23 +32,28 @@ def _get_client():
     return _client
 
 
-def stream_reply(messages, system_prompt):
-    """Send a conversation to the model and yield reply text as it streams in.
+def run_turn(messages, system_prompt, tools=None, on_text=None):
+    """Run one model turn to completion and return the final Message.
 
-    `messages` is a list of {"role": "user"|"assistant", "content": str}.
+    `messages` is a list of {"role": "user"|"assistant", "content": ...}.
+    Text is streamed as it arrives via `on_text(chunk)` if given, so a caller
+    can print or speak it live — this is what Tier 3's voice output will
+    hook into as well. Tool-use input isn't streamed; it only matters once
+    it's complete, which is on the returned Message's content blocks.
+
     Raises ProviderError on any failure — callers don't need to know about
     the underlying SDK's exception types.
     """
     client = _get_client()
+    kwargs = dict(model=MODEL_NAME, max_tokens=MAX_TOKENS, system=system_prompt, messages=messages)
+    if tools:
+        kwargs["tools"] = tools
     try:
-        with client.messages.stream(
-            model=MODEL_NAME,
-            max_tokens=MAX_TOKENS,
-            system=system_prompt,
-            messages=messages,
-        ) as stream:
+        with client.messages.stream(**kwargs) as stream:
             for text in stream.text_stream:
-                yield text
+                if on_text:
+                    on_text(text)
+            return stream.get_final_message()
     except anthropic.AuthenticationError:
         raise ProviderError("Authentication failed — check your ANTHROPIC_API_KEY.")
     except anthropic.APIConnectionError:
@@ -59,3 +64,19 @@ def stream_reply(messages, system_prompt):
         raise ProviderError(f"The model provider returned an error ({exc.status_code}).")
     except anthropic.APIError as exc:
         raise ProviderError(f"Something went wrong talking to the model: {exc}")
+
+
+def serialize_content_blocks(blocks):
+    """Convert SDK response content blocks into plain dicts so they can be
+    fed back into the next call's `messages` list."""
+    serialized = []
+    for block in blocks:
+        if block.type == "text":
+            serialized.append({"type": "text", "text": block.text})
+        elif block.type == "tool_use":
+            serialized.append(
+                {"type": "tool_use", "id": block.id, "name": block.name, "input": block.input}
+            )
+        else:
+            serialized.append(block.model_dump())
+    return serialized

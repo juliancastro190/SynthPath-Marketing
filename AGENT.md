@@ -68,9 +68,9 @@ before starting work in a new session.
 
 ## Tier status
 
-- [ ] Tier 0 — Interview / spec (this file)
-- [ ] Tier 1 — Brain: text conversation loop
-- [ ] Tier 2 — Hands: tool registry + first tools
+- [x] Tier 0 — Interview / spec (this file)
+- [x] Tier 1 — Brain: text conversation loop
+- [x] Tier 2 — Hands: tool registry + first tools
 - [ ] Tier 3 — Ears/mouth: push-to-talk voice
 - [ ] Tier 4 — Memory: durable facts across restarts
 - [ ] Tier 5 — Heartbeat: proactive background loop

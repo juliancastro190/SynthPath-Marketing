@@ -9,6 +9,15 @@ from griffin.brain.provider import ProviderError
 from griffin.config import ASSISTANT_NAME
 
 
+def _on_tool_call(name, tool_input):
+    print(f"\n  [using tool: {name}({tool_input})]")
+
+
+def _on_tool_result(name, result_text, is_error):
+    tag = "error" if is_error else "result"
+    print(f"  [{name} {tag}: {result_text}]")
+
+
 def run_repl():
     print(f"{ASSISTANT_NAME} is ready. Type a message and press Enter. Ctrl+C to quit.\n")
     loop = ConversationLoop()
@@ -25,8 +34,12 @@ def run_repl():
 
         print(f"{ASSISTANT_NAME}: ", end="", flush=True)
         try:
-            for chunk in loop.send(user_text):
-                print(chunk, end="", flush=True)
+            loop.send(
+                user_text,
+                on_text=lambda chunk: print(chunk, end="", flush=True),
+                on_tool_call=_on_tool_call,
+                on_tool_result=_on_tool_result,
+            )
             print()
         except ProviderError as exc:
             print(f"\n[trouble reaching {ASSISTANT_NAME}'s brain: {exc}]")
