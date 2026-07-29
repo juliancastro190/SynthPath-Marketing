@@ -52,6 +52,11 @@ before starting work in a new session.
   - Anything else hard to undo
   - Confirmation is per-action — approving one send does not pre-approve
     the next.
+  - Implemented as `config.yaml`'s `tools.requires_confirmation` list —
+    currently just `forget` (deletes a memory), since none of the other
+    built-in tools send, spend, delete, or change a setting yet. Add a
+    tool name there, not a code change, whenever a new consequential tool
+    is added.
 - **Proactive behavior:** Yes, Griffin can reach out first (reminders,
   noticed conditions) — but quiet by default. It earns interruptions rather
   than assuming them. Built in Tier 5, with quiet hours, held (not lost)
@@ -76,4 +81,15 @@ before starting work in a new session.
 - [x] Tier 3 — Ears/mouth: push-to-talk voice
 - [x] Tier 4 — Memory: durable facts across restarts
 - [x] Tier 5 — Heartbeat: proactive background loop
-- [ ] Tier 6 — Rails: confirmation gate, config, audit log, kill switch
+- [x] Tier 6 — Rails: confirmation gate, config, audit log, kill switch
+
+## What's left for a fuller build (not started)
+
+- A real "send" capability (email/SMS) to wire the confirmation gate up
+  to an actual consequential action, instead of only `forget`. Drafting
+  (Tier 2) deliberately stops short of this.
+- A dedicated tool that fetches untrusted external content (a web page,
+  an email) to exercise the external-content-is-data posture against a
+  real tool boundary, not just pasted text in a message.
+- More capabilities, sub-agents, a visual face, an always-on host — see
+  "Where to go after the baseline" in the original build doc.

@@ -1,0 +1,40 @@
+# Griffin's project-wide configuration. Thresholds, intervals, and safety
+# knobs live here so tuning them is a one-line edit, not a code change.
+
+model:
+  max_tool_rounds: 8 # safety valve against a runaway back-and-forth with the model in one turn
+
+tools:
+  # Tool names that must get the user's explicit yes before running, even
+  # though the model is allowed to request them. Confirmation never
+  # generalizes across turns — every matching call asks again.
+  requires_confirmation:
+    - forget
+  # How long voice mode waits for a spoken yes/no before treating a
+  # confirmation as declined. The text interface just blocks on a normal
+  # prompt instead — there's no one to time out on when you're already
+  # sitting at the keyboard answering it.
+  confirmation_timeout_seconds: 30
+
+heartbeat:
+  poll_interval_seconds: 30
+
+  quiet_hours:
+    start: "22:00" # 24h local time — alerts wait until after this
+    end: "08:00"
+
+  checks:
+    - name: stale_open_items
+      type: stale_open_items
+      enabled: true
+      interval_seconds: 300 # how often this check itself runs
+      stale_after_minutes: 1440 # 24h — open this long counts as stale
+      alert_threshold: 3 # more than this many stale items -> alert, not just a log entry
+
+kill_switch:
+  # One switch to pause all proactive behavior at once. The heartbeat
+  # process keeps running and re-reads this file every tick, so flipping
+  # this back to false resumes checks without restarting anything — but
+  # while true, no checks run and no new notices get filed. Ordinary
+  # conversation (text or voice) is completely unaffected either way.
+  proactive_paused: false

@@ -19,6 +19,13 @@ def _on_tool_result(name, result_text, is_error):
     print(f"  [{name} {tag}: {result_text}]")
 
 
+def _on_confirm(tool_name, tool_input, description):
+    # A normal blocking prompt is fine here — unlike a background action
+    # with no one watching, you're sitting at the keyboard right now.
+    answer = input(f"\n{ASSISTANT_NAME} wants to: {description}\nProceed? [y/N]: ").strip().lower()
+    return answer in ("y", "yes")
+
+
 def run_repl():
     print(f"{ASSISTANT_NAME} is ready. Type a message and press Enter. Ctrl+C to quit.\n")
     print_startup_notices()
@@ -41,6 +48,7 @@ def run_repl():
                 on_text=lambda chunk: print(chunk, end="", flush=True),
                 on_tool_call=_on_tool_call,
                 on_tool_result=_on_tool_result,
+                on_confirm=_on_confirm,
             )
             print()
         except ProviderError as exc:

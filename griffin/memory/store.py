@@ -73,6 +73,17 @@ def remove_fact(tool_input):
     return f"Forgot memory [{fact_id}]."
 
 
+def describe_forget(tool_input):
+    """What forget() is about to do, in plain language — shown by the
+    confirmation gate before it actually runs (forgetting is a delete,
+    which is on the never-without-asking list)."""
+    fact_id = (tool_input.get("id") or "").strip()
+    for fact in _load():
+        if fact["id"] == fact_id:
+            return f'forget this memory: "{fact["text"]}"'
+    return f"forget memory [{fact_id}] (no such memory currently exists)"
+
+
 def list_facts_tool(tool_input):
     facts = _load()
     if not facts:
@@ -125,6 +136,10 @@ TOOLS = [
             "required": ["id"],
         },
         handler=remove_fact,
+        describe=describe_forget,
+        # Deleting data is on the never-without-asking list; whether this
+        # actually gates the call is decided by config.yaml, not this flag
+        # (build_default_registry sets it from there) — see registry.py.
     ),
     Tool(
         name="list_memories",
