@@ -20,8 +20,8 @@ Run:
 ```
 
 Type a message and press Enter. Griffin streams its reply and remembers the
-conversation until you quit (Ctrl+C) — restarting forgets everything; durable
-memory arrives in Tier 4.
+conversation until you quit (Ctrl+C) — restarting forgot everything before
+Tier 4 added durable memory below.
 
 ## Tier 2 — tools
 
@@ -83,7 +83,33 @@ I haven't been able to test real microphone/speaker hardware or a live
 Deepgram/ElevenLabs call in the sandbox this was built in — the mechanics
 (recording → WAV, sentence-chunked streaming to TTS, interrupt-by-killing-
 playback, key-hold detection) are unit-tested with mocks, but **you should
-verify the actual voice round-trip yourself** per the checklist below.
+verify the actual voice round-trip yourself** once you're on a machine with
+a mic and speakers.
+
+## Tier 4 — memory
+
+Griffin now remembers durable facts about you across restarts, separate
+from the in-session conversation history. Facts live as plain JSON in
+`data/memory.json` — one fact per entry, so it's easy to open, correct, or
+delete by hand. They're loaded into the system prompt fresh at the start of
+every turn, framed explicitly as background knowledge rather than
+instructions, so a stored fact can never quietly bypass your judgment or
+the confirmation gate arriving in Tier 6.
+
+Tools: `remember` / `update_memory` / `forget` / `list_memories`. Try:
+
+```
+You: remember that I prefer morning meetings
+You: what do you remember about me?
+```
+
+Then quit (Ctrl+C) and run `main.py` again — Griffin should already know
+it without being told twice. Open `data/memory.json`, hand-edit a fact, and
+run again to confirm your edit sticks.
+
+`griffin/storage.py` (moved from `griffin/tools/storage.py`) is the shared
+plain-JSON persistence helper — reminders, tasks, drafts, and memory all
+use it, since it was the same few lines of logic either way.
 
 ---
 

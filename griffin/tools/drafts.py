@@ -9,7 +9,7 @@ confirmation gate in Tier 6, wired to an actual send capability.
 import uuid
 from datetime import datetime, timezone
 
-from griffin.tools import storage
+from griffin import storage
 from griffin.tools.registry import Tool, ToolError
 
 FILENAME = "drafts.json"

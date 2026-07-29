@@ -59,11 +59,13 @@ class ToolRegistry:
 
 
 def build_default_registry():
-    # Imported lazily to avoid a circular import: each tool module imports
-    # Tool/ToolError from this module at the top of the file.
+    # Imported lazily to avoid a circular import: each tool module (and the
+    # memory store) imports Tool/ToolError from this module at the top of
+    # its file.
+    from griffin.memory import store as memory
     from griffin.tools import drafts, reminders, tasks
 
     registry = ToolRegistry()
-    for tool in [*reminders.TOOLS, *tasks.TOOLS, *drafts.TOOLS]:
+    for tool in [*reminders.TOOLS, *tasks.TOOLS, *drafts.TOOLS, *memory.TOOLS]:
         registry.register(tool)
     return registry

@@ -7,7 +7,7 @@ the user at the right time — that's the heartbeat's job (Tier 5).
 import uuid
 from datetime import datetime, timezone
 
-from griffin.tools import storage
+from griffin import storage
 from griffin.tools.registry import Tool, ToolError
 
 FILENAME = "reminders.json"

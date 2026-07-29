@@ -74,6 +74,6 @@ before starting work in a new session.
 - [x] Tier 1 — Brain: text conversation loop
 - [x] Tier 2 — Hands: tool registry + first tools
 - [x] Tier 3 — Ears/mouth: push-to-talk voice
-- [ ] Tier 4 — Memory: durable facts across restarts
+- [x] Tier 4 — Memory: durable facts across restarts
 - [ ] Tier 5 — Heartbeat: proactive background loop
 - [ ] Tier 6 — Rails: confirmation gate, config, audit log, kill switch

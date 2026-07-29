@@ -1,15 +1,15 @@
-"""JSON-file storage for tools that need to persist state across restarts.
+"""JSON-file storage shared by anything that needs to persist state across
+restarts — tools (reminders, tasks, drafts) and the Tier 4 memory store.
 
 `data/` lives at the repo root and is git-ignored — it's the user's local
-runtime data (reminders, tasks, drafts), not source. This is deliberately
-plain JSON so it's easy to open and inspect by hand, same spirit as the
-Tier 4 memory store will be.
+runtime data, not source. This is deliberately plain JSON so it's easy to
+open and inspect (or edit) by hand.
 """
 
 import json
 import os
 
-_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(_REPO_ROOT, "data")
 
 

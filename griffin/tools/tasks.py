@@ -5,7 +5,7 @@ the assistant can add to, check off, and report on.
 import uuid
 from datetime import datetime, timezone
 
-from griffin.tools import storage
+from griffin import storage
 from griffin.tools.registry import Tool, ToolError
 
 FILENAME = "tasks.json"
