@@ -1,0 +1,10 @@
+anthropic>=0.40.0
+python-dotenv>=1.0.0
+pyyaml>=6.0
+
+# Tier 3 — voice
+deepgram-sdk>=3.0.0
+elevenlabs>=1.0.0
+sounddevice>=0.4.6
+numpy>=1.24
+pynput>=1.7.6
