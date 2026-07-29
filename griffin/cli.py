@@ -7,6 +7,7 @@ to debug the brain without talking to your computer.
 from griffin.brain.loop import ConversationLoop
 from griffin.brain.provider import ProviderError
 from griffin.config import ASSISTANT_NAME
+from griffin.heartbeat.notices import print_startup_notices
 
 
 def _on_tool_call(name, tool_input):
@@ -20,6 +21,7 @@ def _on_tool_result(name, result_text, is_error):
 
 def run_repl():
     print(f"{ASSISTANT_NAME} is ready. Type a message and press Enter. Ctrl+C to quit.\n")
+    print_startup_notices()
     loop = ConversationLoop()
 
     while True:

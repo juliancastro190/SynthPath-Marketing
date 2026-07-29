@@ -111,6 +111,63 @@ run again to confirm your edit sticks.
 plain-JSON persistence helper — reminders, tasks, drafts, and memory all
 use it, since it was the same few lines of logic either way.
 
+## Tier 5 — heartbeat
+
+Griffin can now notice things without being asked, via a background loop
+that's completely separate from the conversation loop — `heartbeat_main.py`
+runs on its own, independent of whether `main.py` or `voice_main.py` happens
+to be open. What gets checked and how often lives in `heartbeat.yaml`, not
+in code:
+
+```
+poll_interval_seconds: 30
+quiet_hours: { start: "22:00", end: "08:00" }
+checks:
+  - name: stale_open_items
+    type: stale_open_items
+    interval_seconds: 300
+    stale_after_minutes: 1440   # 24h
+    alert_threshold: 3          # more than this -> worth interrupting for
+```
+
+The one built-in check (`griffin/heartbeat/checks.py`) looks for reminders
+or tasks that have sat open a long time. Below the threshold it's just a
+quiet log entry; above it, it's an "alert" — printed live to the
+heartbeat's own terminal (unless it's quiet hours) and, either way, filed
+into `data/heartbeat_notices.json` so it's never lost. Both `main.py` and
+`voice_main.py` show every undismissed notice under "While you were away"
+at startup, whether or not you were watching the heartbeat run — that's
+the guarantee that nothing noticed while you're gone gets dropped. Notices
+stay pending (and keep reappearing at startup) until you dismiss them:
+
+```
+You: what's pending?
+You: dismiss that
+```
+
+The schedule itself survives restarts too (`data/heartbeat_state.json`
+tracks when each check is next due), and a check that's still running
+when its next tick comes up gets skipped rather than stacked.
+
+Run it (in its own terminal, alongside `main.py` if you like):
+
+```
+.venv/bin/python heartbeat_main.py
+```
+
+To try it quickly: lower `stale_after_minutes` and `alert_threshold` to 0
+in `heartbeat.yaml`, add a task or reminder, and watch an alert print
+within one `interval_seconds`. I verified the full mechanics myself in this
+sandbox — no hardware needed here — including genuine restart-safety (a
+fresh `HeartbeatRunner` reading persisted schedule state from disk doesn't
+refire early), the no-pile-up guard under a deliberately slow check, quiet
+hours suppressing the live print while still filing the notice, and the
+full "seed a notice → see it in `main.py` → dismiss it → gone next run"
+loop end-to-end against the real `data/` directory.
+
+The kill switch to pause all of this at once, plus folding `heartbeat.yaml`
+into a single project-wide config, arrives in Tier 6.
+
 ---
 
 Digital Marketing Platform

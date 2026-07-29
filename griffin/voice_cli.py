@@ -7,6 +7,7 @@ to its output (spoken aloud, in addition to printed).
 from griffin.brain.loop import ConversationLoop
 from griffin.brain.provider import ProviderError
 from griffin.config import ASSISTANT_NAME, PTT_KEY_NAME
+from griffin.heartbeat.notices import print_startup_notices
 from griffin.voice.chunker import SentenceChunker
 from griffin.voice.ptt import PushToTalkSession
 from griffin.voice.stt import SttError, transcribe
@@ -25,6 +26,7 @@ def _on_tool_result(name, result_text, is_error):
 def run_voice():
     print(f"{ASSISTANT_NAME} voice mode. Hold [{PTT_KEY_NAME}] to talk, release to send.")
     print("Ctrl+C to quit. The text interface (main.py) still works if you'd rather type.\n")
+    print_startup_notices()
 
     loop = ConversationLoop()
     try:

@@ -1,0 +1,19 @@
+# Griffin's heartbeat — background checks that run without being asked.
+# Tune what gets checked and how often here; no code changes needed.
+# Quiet by default: a check only interrupts (an "alert") when it crosses
+# alert_threshold. Anything below that just goes into the calm log,
+# surfaced next time you open Griffin.
+
+poll_interval_seconds: 30
+
+quiet_hours:
+  start: "22:00" # 24h local time — alerts wait until after this
+  end: "08:00"
+
+checks:
+  - name: stale_open_items
+    type: stale_open_items
+    enabled: true
+    interval_seconds: 300 # how often this check itself runs
+    stale_after_minutes: 1440 # 24h — open this long counts as stale
+    alert_threshold: 3 # more than this many stale items -> alert, not just a log entry
