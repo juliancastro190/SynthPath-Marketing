@@ -13,6 +13,7 @@ runner.
 from datetime import datetime, timedelta, timezone
 
 from griffin import storage
+from griffin.etsy.client import EtsyClient, EtsyError
 
 
 def _open_stale_items(filename, stale_after, now):
@@ -51,6 +52,57 @@ def stale_open_items(check_config, now=None):
     return [(message, severity)]
 
 
+def etsy_unshipped_orders(check_config, now=None):
+    """Paid Etsy orders that have sat unshipped longer than
+    `stale_after_hours`. Silently does nothing if no shop is connected yet
+    (EtsyError) rather than raising — same "quiet unless there's something
+    to say" posture as every other check, just with an extra failure mode
+    (not connected) that isn't the user's problem to see a traceback for."""
+    now = now or datetime.now(timezone.utc)
+    stale_after = timedelta(hours=check_config.get("stale_after_hours", 48))
+    alert_threshold = check_config.get("alert_threshold", 1)
+
+    try:
+        receipts = EtsyClient().list_receipts(was_shipped=False)
+    except EtsyError:
+        return []
+
+    stale = []
+    for r in receipts:
+        created = r.get("created_timestamp")
+        if created is None:
+            continue
+        created_at = datetime.fromtimestamp(created, tz=timezone.utc)
+        if now - created_at >= stale_after:
+            stale.append(r)
+    if not stale:
+        return []
+
+    message = f"You have {len(stale)} Etsy order(s) unshipped for over {check_config.get('stale_after_hours', 48)}h — want a recap?"
+    severity = "alert" if len(stale) >= alert_threshold else "info"
+    return [(message, severity)]
+
+
+def etsy_low_inventory(check_config, now=None):
+    """Active Etsy listings at or below `low_quantity_threshold`."""
+    threshold = check_config.get("low_quantity_threshold", 2)
+
+    try:
+        listings = EtsyClient().list_active_listings(limit=100)
+    except EtsyError:
+        return []
+
+    low = [l for l in listings if l.get("quantity", 0) <= threshold]
+    if not low:
+        return []
+
+    names = ", ".join(l["title"] for l in low[:5])
+    message = f"{len(low)} Etsy listing(s) are low on stock: {names}{'...' if len(low) > 5 else ''}"
+    return [(message, "alert")]
+
+
 CHECK_FUNCTIONS = {
     "stale_open_items": stale_open_items,
+    "etsy_unshipped_orders": etsy_unshipped_orders,
+    "etsy_low_inventory": etsy_low_inventory,
 }

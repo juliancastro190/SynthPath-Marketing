@@ -21,6 +21,10 @@ before starting work in a new session.
 3. **Drafting messages** — write messages (emails, texts, etc.) for review;
    sending them is a consequential action and goes through the confirmation
    gate (Tier 6), never sent automatically.
+4. **Selling on Etsy** (Tier 7) — browse the shop's listings and orders,
+   draft new listings and buyer replies, and — through the same
+   confirmation gate — publish a listing, change a live price/quantity,
+   take a listing down, or mark an order shipped.
 
 ## Stack and model
 
@@ -53,10 +57,10 @@ before starting work in a new session.
   - Confirmation is per-action — approving one send does not pre-approve
     the next.
   - Implemented as `config.yaml`'s `tools.requires_confirmation` list —
-    currently just `forget` (deletes a memory), since none of the other
-    built-in tools send, spend, delete, or change a setting yet. Add a
-    tool name there, not a code change, whenever a new consequential tool
-    is added.
+    `forget` (deletes a memory) plus, as of Tier 7, the five Etsy tools
+    that publish a listing, change a live price/quantity, take a listing
+    down, or mark an order shipped. Add a tool name there, not a code
+    change, whenever a new consequential tool is added.
 - **Proactive behavior:** Yes, Griffin can reach out first (reminders,
   noticed conditions) — but quiet by default. It earns interruptions rather
   than assuming them. Built in Tier 5, with quiet hours, held (not lost)
@@ -82,14 +86,24 @@ before starting work in a new session.
 - [x] Tier 4 — Memory: durable facts across restarts
 - [x] Tier 5 — Heartbeat: proactive background loop
 - [x] Tier 6 — Rails: confirmation gate, config, audit log, kill switch
+- [x] Tier 7 — Etsy: browse listings/orders, draft listings + buyer
+      replies, and (confirmation-gated) publish, reprice, restock,
+      deactivate, and mark-shipped
 
 ## What's left for a fuller build (not started)
 
 - A real "send" capability (email/SMS) to wire the confirmation gate up
-  to an actual consequential action, instead of only `forget`. Drafting
-  (Tier 2) deliberately stops short of this.
+  to an actual consequential action beyond Etsy's mark-shipped/publish/
+  price/quantity/deactivate tools. Drafting (Tier 2) deliberately stops
+  short of this, and Etsy buyer replies stay drafts too — the public Etsy
+  API has no endpoint for an app to originate a buyer message.
 - A dedicated tool that fetches untrusted external content (a web page,
   an email) to exercise the external-content-is-data posture against a
   real tool boundary, not just pasted text in a message.
+- The Etsy connection (`etsy_connect.py`'s OAuth flow, and every live API
+  call in `griffin/etsy/client.py`) is built and unit-tested with mocks
+  but hasn't been run against a real Etsy shop in this sandbox — verify
+  the actual connect-and-sell round-trip yourself once you have Etsy app
+  keys and a shop to point it at.
 - More capabilities, sub-agents, a visual face, an always-on host — see
   "Where to go after the baseline" in the original build doc.

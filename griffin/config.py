@@ -17,3 +17,7 @@ ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWA
 # Which key to hold to talk. One of: ctrl_r, ctrl_l, alt_r, alt_l, space.
 # Defaults to right Ctrl so it never collides with normal typing.
 PTT_KEY_NAME = os.environ.get("GRIFFIN_PTT_KEY", "ctrl_r")
+
+# Tier 7 — Etsy selling
+ETSY_API_KEY = os.environ.get("ETSY_API_KEY")
+ETSY_SHOP_ID = os.environ.get("ETSY_SHOP_ID")

@@ -82,13 +82,13 @@ def build_default_registry(config=None):
     from griffin.heartbeat import notices
     from griffin.memory import store as memory
     from griffin.project_config import load_config
-    from griffin.tools import drafts, reminders, tasks
+    from griffin.tools import drafts, etsy, reminders, tasks
 
     config = config if config is not None else load_config()
     confirm_names = set(config.get("tools", {}).get("requires_confirmation", []))
 
     registry = ToolRegistry()
-    for tool in [*reminders.TOOLS, *tasks.TOOLS, *drafts.TOOLS, *memory.TOOLS, *notices.TOOLS]:
+    for tool in [*reminders.TOOLS, *tasks.TOOLS, *drafts.TOOLS, *memory.TOOLS, *notices.TOOLS, *etsy.TOOLS]:
         # Tool objects are module-level singletons reused across calls, so
         # this must set the flag both ways rather than only ever turning
         # it on — otherwise a later build with a different config could

@@ -10,6 +10,13 @@ tools:
   # generalizes across turns — every matching call asks again.
   requires_confirmation:
     - forget
+    # Tier 7 — Etsy: anything that spends money, changes something live on
+    # the shop, or emails a buyer. Browsing and drafting stay ungated.
+    - etsy_publish_listing
+    - etsy_update_listing_price
+    - etsy_update_listing_quantity
+    - etsy_deactivate_listing
+    - etsy_mark_order_shipped
   # How long voice mode waits for a spoken yes/no before treating a
   # confirmation as declined. The text interface just blocks on a normal
   # prompt instead — there's no one to time out on when you're already
@@ -30,6 +37,22 @@ heartbeat:
       interval_seconds: 300 # how often this check itself runs
       stale_after_minutes: 1440 # 24h — open this long counts as stale
       alert_threshold: 3 # more than this many stale items -> alert, not just a log entry
+
+    # Tier 7 — Etsy: both disabled by default since they need a connected
+    # shop (ETSY_API_KEY/ETSY_SHOP_ID + etsy_connect.py) to do anything —
+    # flip enabled: true once yours is connected.
+    - name: etsy_unshipped_orders
+      type: etsy_unshipped_orders
+      enabled: false
+      interval_seconds: 900 # 15m
+      stale_after_hours: 48 # an unshipped paid order open this long is worth a nudge
+      alert_threshold: 1 # any order this stale is worth interrupting for
+
+    - name: etsy_low_inventory
+      type: etsy_low_inventory
+      enabled: false
+      interval_seconds: 3600 # 1h — inventory doesn't need minute-level polling
+      low_quantity_threshold: 2 # active listings at or below this qty -> alert
 
 kill_switch:
   # One switch to pause all proactive behavior at once. The heartbeat
