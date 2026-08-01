@@ -247,6 +247,77 @@ the question naming the actual fact, and only deleted it after a
 simulated spoken "yes" — including the timeout-to-declined path when no
 answer ever comes.
 
+## Tier 7 — Etsy (selling for you)
+
+Griffin can now act as a seller on your Etsy shop, wired through the exact
+same brain, tools, and confirmation gate as everything above — there's no
+separate "Etsy mode."
+
+**Connect your shop (one-time):**
+
+1. Create an app at [developer.etsy.com](https://www.etsy.com/developers/) and
+   copy its keystring into `.env` as `ETSY_API_KEY`.
+2. Find your shop's numeric id (Shop Manager → Settings → Options, or in
+   your shop's URL) and set `ETSY_SHOP_ID` in `.env`.
+3. Run the one-time OAuth authorization:
+
+   ```
+   .venv/bin/python etsy_connect.py
+   ```
+
+   This opens Etsy's consent screen, catches the redirect on a local
+   throwaway server, and saves a refresh token to `data/etsy_token.json`
+   (git-ignored, like everything else under `data/`). Every tool call
+   after this refreshes its own access token automatically — see
+   `griffin/etsy/auth.py`.
+
+**What Griffin can do**, via `griffin/tools/etsy.py`:
+
+Read-only, no confirmation needed:
+- `etsy_list_active_listings` / `etsy_get_listing`
+- `etsy_list_orders` / `etsy_get_order`
+
+Drafts only — like `draft_message`, these never touch the live shop:
+- `etsy_draft_listing` / `etsy_list_listing_drafts` — compose a new
+  listing (title, description, price, quantity, category, tags) for
+  review before it ever goes live.
+- `etsy_draft_buyer_reply` / `etsy_list_buyer_reply_drafts` — draft a
+  reply to a buyer's message. Etsy's public API has no endpoint for an
+  app to originate a buyer message, so this is as far as automation goes;
+  paste the draft into Etsy's own Messages yourself.
+
+Consequential — gated by `config.yaml`'s `tools.requires_confirmation`,
+same as `forget`:
+- `etsy_publish_listing` — takes a saved draft live (spends Etsy's
+  listing fee, makes it public).
+- `etsy_update_listing_price` / `etsy_update_listing_quantity` — changes
+  a live listing.
+- `etsy_deactivate_listing` — takes a live listing down.
+- `etsy_mark_order_shipped` — adds tracking and marks an order shipped
+  (emails the buyer).
+
+Try it:
+
+```
+You: what's active on my Etsy shop right now?
+You: draft a new listing for a walnut cutting board, $38, qty 5
+You: publish that draft
+Griffin wants to: publish "..." to Etsy at $38.00 — this spends Etsy's
+listing fee and makes it publicly visible immediately
+Proceed? [y/N]:
+```
+
+Two optional heartbeat checks ship disabled in `config.yaml`
+(`etsy_unshipped_orders`, `etsy_low_inventory`) — flip `enabled: true` on
+either once your shop is connected to get a proactive nudge (subject to
+the same quiet hours and kill switch as `stale_open_items`) when an order
+has sat unshipped too long or a listing is nearly out of stock.
+
+The OAuth flow and every live Etsy API call are unit-tested against
+mocked HTTP responses (`tests/`) — I haven't run this against a real Etsy
+shop in this sandbox (no app keys, no shop to point it at), so **verify
+the actual connect-and-sell round-trip yourself** once you have both.
+
 ---
 
 Digital Marketing Platform
