@@ -177,7 +177,7 @@ model:
   max_tool_rounds: 8
 tools:
   requires_confirmation: [forget]   # delete/send/spend/settings-change tools go here
-  confirmation_timeout_seconds: 30  # voice mode only — see below
+  confirmation_timeout_seconds: 30  # voice and Discord only — see below
 heartbeat:
   poll_interval_seconds: 30
   quiet_hours: { start: "22:00", end: "08:00" }
@@ -246,6 +246,40 @@ full mocked voice session where Griffin asked to forget something, spoke
 the question naming the actual fact, and only deleted it after a
 simulated spoken "yes" — including the timeout-to-declined path when no
 answer ever comes.
+
+## Extension — Discord bridge (phone access)
+
+Beyond the six-tier baseline: `griffin/discord_bot.py` puts Griffin behind
+a Discord DM, so you can talk to it from your phone without a laptop, and
+the heartbeat can finally reach out somewhere you'll actually see it. It
+reuses the exact same `ConversationLoop` as the text and voice
+interfaces — no forked logic — restricted to DMs from a single owner
+(`DISCORD_OWNER_ID`); every other message is silently ignored.
+
+```
+.venv/bin/python discord_main.py
+```
+
+The confirmation gate works the same way it does in voice mode: Griffin
+sends the question as a DM and takes your next DM as the answer (parsed
+for yes/no, same `confirmation_timeout_seconds` timeout if you don't
+reply). The heartbeat also gained a second, best-effort delivery path
+(`griffin/heartbeat/discord_push.py`) — an "alert" notice outside quiet
+hours now DMs you directly, on top of always being filed to the inbox
+regardless of whether the push succeeds.
+
+I verified the access control (DMs only, owner only, ignores the bot's
+own messages, routes a reply correctly to a pending confirmation instead
+of starting a new turn), the full confirm/decline/timeout flow against a
+real background event loop (proving the sync-loop-in-a-thread ↔
+async-Discord-client bridge actually works, not just that the pieces
+compile), and the "while you were away" notices delivering as a DM on
+startup. I have not connected this to the real Discord API — that needs
+your bot token and user ID, both of which only you can create — so **you
+should verify a live DM round-trip yourself** once it's deployed.
+
+See `DEPLOY.md` for creating the Discord bot and standing up an always-on
+host to run it on.
 
 ---
 

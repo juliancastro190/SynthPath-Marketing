@@ -17,3 +17,10 @@ ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWA
 # Which key to hold to talk. One of: ctrl_r, ctrl_l, alt_r, alt_l, space.
 # Defaults to right Ctrl so it never collides with normal typing.
 PTT_KEY_NAME = os.environ.get("GRIFFIN_PTT_KEY", "ctrl_r")
+
+# Discord bridge
+DISCORD_BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
+# The owner's Discord user ID (a snowflake, from Developer Mode ->
+# right-click your own profile -> Copy User ID). The bot ignores every
+# message that isn't a DM from this exact user.
+DISCORD_OWNER_ID = os.environ.get("DISCORD_OWNER_ID")

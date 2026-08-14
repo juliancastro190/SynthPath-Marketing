@@ -82,6 +82,10 @@ before starting work in a new session.
 - [x] Tier 4 — Memory: durable facts across restarts
 - [x] Tier 5 — Heartbeat: proactive background loop
 - [x] Tier 6 — Rails: confirmation gate, config, audit log, kill switch
+- [x] Extension — Discord bridge for phone access (`griffin/discord_bot.py`,
+  `DEPLOY.md`): reuses ConversationLoop as-is, owner-only DMs, confirmation
+  gate and heartbeat alerts both reach Discord. Not yet verified against
+  the real Discord API — needs a live bot token and deployment to confirm.
 
 ## What's left for a fuller build (not started)
 

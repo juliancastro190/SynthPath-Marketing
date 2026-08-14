@@ -20,6 +20,7 @@ import threading
 
 from griffin.brain.loop import ConversationLoop
 from griffin.brain.provider import ProviderError
+from griffin.confirm import parse_yes_no
 from griffin.config import ASSISTANT_NAME, PTT_KEY_NAME
 from griffin.heartbeat.notices import print_startup_notices
 from griffin.project_config import load_config
@@ -27,18 +28,6 @@ from griffin.voice.chunker import SentenceChunker
 from griffin.voice.ptt import PushToTalkSession
 from griffin.voice.stt import SttError, transcribe
 from griffin.voice.tts import TTSPlayer, TtsError
-
-_YES_WORDS = ("yes", "yeah", "yep", "yup", "sure", "confirm", "affirmative", "go ahead", "do it")
-_NO_WORDS = ("no", "nope", "don't", "do not", "cancel", "negative", "stop")
-
-
-def _parse_yes_no(text):
-    lowered = text.lower()
-    if any(word in lowered for word in _NO_WORDS):
-        return False
-    if any(word in lowered for word in _YES_WORDS):
-        return True
-    return False  # unclear answer -> safe default: decline, don't guess yes
 
 
 def _on_tool_call(name, tool_input):
@@ -78,7 +67,7 @@ def run_voice():
             print(f"\n[no answer within {confirmation_timeout}s — treating as declined]")
         finally:
             awaiting_confirmation.clear()
-        approved = _parse_yes_no(reply_text)
+        approved = parse_yes_no(reply_text)
         print(f"[{'confirmed' if approved else 'declined'}]")
         return approved
 

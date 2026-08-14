@@ -23,7 +23,7 @@ import threading
 from datetime import datetime, time, timedelta, timezone
 
 from griffin import audit
-from griffin.heartbeat import notices
+from griffin.heartbeat import discord_push, notices
 from griffin.heartbeat.checks import CHECK_FUNCTIONS
 from griffin.heartbeat.state import get_next_due, set_next_due
 from griffin.project_config import load_config
@@ -115,6 +115,7 @@ class HeartbeatRunner:
                 audit.log_heartbeat_notice(name, message, severity)
                 if severity == "alert" and not in_quiet:
                     print(f"\n[Griffin] {message}")
+                    discord_push.send_dm(message)
         finally:
             interval = timedelta(seconds=check_config.get("interval_seconds", 300))
             set_next_due(name, now + interval)
