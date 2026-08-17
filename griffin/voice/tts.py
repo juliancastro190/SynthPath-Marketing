@@ -34,39 +34,48 @@ class TtsError(Exception):
 
 
 class LocalTTSPlayer:
+    """pyttsx3 has a well-known issue where reusing one engine instance
+    across multiple say()/runAndWait() cycles silently stops producing
+    audio after the first call — it works once, then goes quiet with no
+    error. The documented workaround (and what this class does) is to
+    create a fresh engine per utterance rather than keeping one around."""
+
     def __init__(self, voice_hint=None):
         try:
             import pyttsx3
         except ImportError:
             raise TtsError("pyttsx3 is not installed — run `pip install -r requirements.txt`.")
+        self._pyttsx3 = pyttsx3
+
         try:
-            self._engine = pyttsx3.init()
+            probe_engine = pyttsx3.init()
         except Exception as exc:
             raise TtsError(f"couldn't start the local speech engine: {exc}")
+        self._voice_id = self._resolve_voice(probe_engine, voice_hint if voice_hint is not None else LOCAL_TTS_VOICE)
 
-        self._select_voice(voice_hint if voice_hint is not None else LOCAL_TTS_VOICE)
         self._queue = queue.Queue()
-        self._speaking = threading.Event()
+        self._current_engine = None
+        self._engine_lock = threading.Lock()
         self._stopped = threading.Event()
         self._worker = threading.Thread(target=self._run, daemon=True)
         self._worker.start()
 
-    def _select_voice(self, hint):
+    def _resolve_voice(self, engine, hint):
+        """Return a voice id to use, or None to leave the engine's default."""
         try:
-            voices = self._engine.getProperty("voices") or []
+            voices = engine.getProperty("voices") or []
         except Exception:
-            return
+            return None
         if not voices:
-            return
+            return None
 
         if hint:
             hint_lower = hint.lower()
             for v in voices:
                 if hint_lower in (v.name or "").lower() or hint_lower in (v.id or "").lower():
-                    self._engine.setProperty("voice", v.id)
-                    return
+                    return v.id
             print(f"[local tts] no installed voice matched '{hint}' — using the default instead]")
-            return
+            return None
 
         # No preference given: guess a male-sounding voice so the default
         # experience isn't tied to whichever voice happens to be first.
@@ -74,12 +83,10 @@ class LocalTTSPlayer:
             gender = (getattr(v, "gender", None) or "").lower()
             name = (v.name or "").lower()
             if "male" in gender and "female" not in gender:
-                self._engine.setProperty("voice", v.id)
-                return
+                return v.id
             if any(n in name for n in ("david", "mark", "guy")):
-                self._engine.setProperty("voice", v.id)
-                return
-        # No male-sounding match found — leave pyttsx3's own default in place.
+                return v.id
+        return None  # no male-sounding match found — leave the engine's own default
 
     def speak(self, text):
         text = text.strip()
@@ -92,9 +99,11 @@ class LocalTTSPlayer:
                 self._queue.get_nowait()
             except queue.Empty:
                 break
-        if self._speaking.is_set():
+        with self._engine_lock:
+            engine = self._current_engine
+        if engine is not None:
             try:
-                self._engine.stop()
+                engine.stop()
             except Exception:
                 pass
 
@@ -109,14 +118,27 @@ class LocalTTSPlayer:
             text = self._queue.get()
             if text is None:
                 continue
-            self._speaking.set()
             try:
-                self._engine.say(text)
-                self._engine.runAndWait()
+                self._speak_one(text)
             except Exception as exc:
                 print(f"\n[trouble speaking: {exc}]")
-            finally:
-                self._speaking.clear()
+
+    def _speak_one(self, text):
+        engine = self._pyttsx3.init()
+        if self._voice_id:
+            try:
+                engine.setProperty("voice", self._voice_id)
+            except Exception:
+                pass
+        with self._engine_lock:
+            self._current_engine = engine
+        try:
+            engine.say(text)
+            engine.runAndWait()
+        finally:
+            with self._engine_lock:
+                if self._current_engine is engine:
+                    self._current_engine = None
 
 
 # ---------------------------------------------------------------------------
