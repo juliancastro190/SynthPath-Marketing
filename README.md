@@ -56,10 +56,21 @@ reply back as it's generated.
 
 Extra prerequisites beyond `pip install -r requirements.txt`:
 
-- **`mpv`** installed and on your `PATH` (`brew install mpv` / `apt install
-  mpv` / `choco install mpv`) — used to play streamed speech, and to let
-  Griffin be interrupted instantly by killing playback.
-- **Deepgram** and **ElevenLabs** API keys in `.env` (see `.env.example`).
+- A **Deepgram** API key in `.env` (speech-to-text — this one's always needed).
+- **Text-to-speech has two backends** behind one seam (`griffin/voice/tts.py`),
+  picked by `TTS_PROVIDER`:
+  - **`local`** (default): free, offline, no account — the OS's own speech
+    engine via `pyttsx3` (SAPI5 on Windows, NSSpeechSynthesizer on macOS,
+    espeak on Linux — `apt install espeak` if it's not already present).
+    More robotic-sounding, but zero setup and zero cost.
+  - **`elevenlabs`**: natural-sounding, streamed. Needs an **ElevenLabs**
+    API key *and* a paid plan — as of this writing, ElevenLabs' free tier
+    returns a 402 `paid_plan_required` error for every voice via the API,
+    including their old default "free" voices, so this path won't work on
+    a brand-new free account. Also needs **`mpv`** on your `PATH`
+    (`brew install mpv` / `apt install mpv` / `winget install shinchiro.mpv`
+    on Windows) — used to play streamed audio and to let Griffin be
+    interrupted instantly by killing playback.
 - On macOS, grant your terminal **Accessibility** permission (System
   Settings → Privacy & Security) so the push-to-talk key can be detected
   globally.
@@ -84,7 +95,12 @@ Deepgram/ElevenLabs call in the sandbox this was built in — the mechanics
 (recording → WAV, sentence-chunked streaming to TTS, interrupt-by-killing-
 playback, key-hold detection) are unit-tested with mocks, but **you should
 verify the actual voice round-trip yourself** once you're on a machine with
-a mic and speakers.
+a mic and speakers. I *was* able to exercise the local TTS backend's actual
+logic against a real (if robotic) `espeak` engine in this sandbox — voice
+enumeration, the male-voice-selection heuristic (including matching real
+Windows SAPI5 names like "Microsoft David Desktop"), queueing, and clean
+shutdown all run for real there, just not through your OS's specific voice
+or speakers.
 
 ## Tier 4 — memory
 

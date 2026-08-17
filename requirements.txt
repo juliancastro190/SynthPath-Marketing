@@ -9,6 +9,7 @@ requests>=2.31
 # Tier 3 — voice
 deepgram-sdk>=3.0.0
 elevenlabs>=1.0.0
+pyttsx3>=2.90
 sounddevice>=0.4.6
 numpy>=1.24
 pynput>=1.7.6

@@ -1,15 +1,19 @@
-"""Text-to-speech seam: the only place that talks to ElevenLabs.
+"""Text-to-speech seam: the only place that turns text into audio.
 
-One job — give it text, play it aloud — so the voice or the provider can
-change in one place. Sentences are queued and spoken one at a time in a
-background thread so the brain never blocks on audio playback, and
-`interrupt()` can cut off what's currently playing plus drop anything
-queued behind it, which is what lets the user barge in mid-reply.
+Two backends behind the same shape (speak/interrupt/shutdown), picked by
+`create_tts_player()` based on TTS_PROVIDER in .env — this is exactly what
+the seam was built for: swapping the voice/provider without touching
+voice_cli.py or anything upstream of it.
 
-Playback is piped into `mpv` rather than decoded in-process: it's a small,
-well-supported dependency, it starts playing before the whole clip has
-arrived (ElevenLabs streams), and killing the subprocess is an instant,
-reliable way to interrupt speech.
+- "local" (default): pyttsx3 over the OS's own speech engine (SAPI5 on
+  Windows, NSSpeechSynthesizer on macOS, espeak on Linux). Free, offline,
+  no account or API key, more robotic-sounding.
+- "elevenlabs": streamed, natural-sounding, but every voice — including
+  the old defaults — currently requires a paid ElevenLabs plan to use via
+  the API; a free-tier account gets a 402 on every request.
+
+Both raise TtsError on failure so voice_cli.py doesn't need to know which
+backend is active.
 """
 
 import queue
@@ -17,30 +21,126 @@ import shutil
 import subprocess
 import threading
 
-from elevenlabs.client import ElevenLabs
-
-from griffin.config import ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID
-
-MODEL_ID = "eleven_turbo_v2_5"
-OUTPUT_FORMAT = "mp3_44100_128"
-
-_client = None
+from griffin.config import ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, LOCAL_TTS_VOICE, TTS_PROVIDER
 
 
 class TtsError(Exception):
     """Raised when speech synthesis or playback can't proceed. Safe to show the user."""
 
 
-def _get_client():
-    global _client
-    if _client is None:
+# ---------------------------------------------------------------------------
+# Local backend (pyttsx3 / OS speech engine) — free, offline, default.
+# ---------------------------------------------------------------------------
+
+
+class LocalTTSPlayer:
+    def __init__(self, voice_hint=None):
+        try:
+            import pyttsx3
+        except ImportError:
+            raise TtsError("pyttsx3 is not installed — run `pip install -r requirements.txt`.")
+        try:
+            self._engine = pyttsx3.init()
+        except Exception as exc:
+            raise TtsError(f"couldn't start the local speech engine: {exc}")
+
+        self._select_voice(voice_hint if voice_hint is not None else LOCAL_TTS_VOICE)
+        self._queue = queue.Queue()
+        self._speaking = threading.Event()
+        self._stopped = threading.Event()
+        self._worker = threading.Thread(target=self._run, daemon=True)
+        self._worker.start()
+
+    def _select_voice(self, hint):
+        try:
+            voices = self._engine.getProperty("voices") or []
+        except Exception:
+            return
+        if not voices:
+            return
+
+        if hint:
+            hint_lower = hint.lower()
+            for v in voices:
+                if hint_lower in (v.name or "").lower() or hint_lower in (v.id or "").lower():
+                    self._engine.setProperty("voice", v.id)
+                    return
+            print(f"[local tts] no installed voice matched '{hint}' — using the default instead]")
+            return
+
+        # No preference given: guess a male-sounding voice so the default
+        # experience isn't tied to whichever voice happens to be first.
+        for v in voices:
+            gender = (getattr(v, "gender", None) or "").lower()
+            name = (v.name or "").lower()
+            if "male" in gender and "female" not in gender:
+                self._engine.setProperty("voice", v.id)
+                return
+            if any(n in name for n in ("david", "mark", "guy")):
+                self._engine.setProperty("voice", v.id)
+                return
+        # No male-sounding match found — leave pyttsx3's own default in place.
+
+    def speak(self, text):
+        text = text.strip()
+        if text:
+            self._queue.put(text)
+
+    def interrupt(self):
+        while True:
+            try:
+                self._queue.get_nowait()
+            except queue.Empty:
+                break
+        if self._speaking.is_set():
+            try:
+                self._engine.stop()
+            except Exception:
+                pass
+
+    def shutdown(self):
+        self.interrupt()
+        self._stopped.set()
+        self._queue.put(None)
+        self._worker.join(timeout=2)
+
+    def _run(self):
+        while not self._stopped.is_set():
+            text = self._queue.get()
+            if text is None:
+                continue
+            self._speaking.set()
+            try:
+                self._engine.say(text)
+                self._engine.runAndWait()
+            except Exception as exc:
+                print(f"\n[trouble speaking: {exc}]")
+            finally:
+                self._speaking.clear()
+
+
+# ---------------------------------------------------------------------------
+# ElevenLabs backend — natural-sounding, streamed, requires a paid plan.
+# ---------------------------------------------------------------------------
+
+_ELEVEN_MODEL_ID = "eleven_turbo_v2_5"
+_ELEVEN_OUTPUT_FORMAT = "mp3_44100_128"
+
+_eleven_client = None
+
+
+def _get_elevenlabs_client():
+    global _eleven_client
+    if _eleven_client is None:
         if not ELEVENLABS_API_KEY:
             raise TtsError("No ELEVENLABS_API_KEY set. Add it to .env.")
-        _client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
-    return _client
+        from elevenlabs.client import ElevenLabs
+
+        _eleven_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+    return _eleven_client
 
 
-class TTSPlayer:
+class ElevenLabsTTSPlayer:
     def __init__(self, voice_id=None):
         if shutil.which("mpv") is None:
             raise TtsError(
@@ -97,12 +197,12 @@ class TTSPlayer:
         with self._proc_lock:
             self._current_proc = proc
         try:
-            client = _get_client()
+            client = _get_elevenlabs_client()
             audio_stream = client.text_to_speech.stream(
                 self.voice_id,
                 text=text,
-                model_id=MODEL_ID,
-                output_format=OUTPUT_FORMAT,
+                model_id=_ELEVEN_MODEL_ID,
+                output_format=_ELEVEN_OUTPUT_FORMAT,
             )
             for chunk in audio_stream:
                 if proc.poll() is not None:
@@ -122,3 +222,10 @@ class TTSPlayer:
             with self._proc_lock:
                 if self._current_proc is proc:
                     self._current_proc = None
+
+
+def create_tts_player():
+    """The one place that decides which backend voice_cli.py gets."""
+    if TTS_PROVIDER == "elevenlabs":
+        return ElevenLabsTTSPlayer()
+    return LocalTTSPlayer()

@@ -27,7 +27,7 @@ from griffin.project_config import load_config
 from griffin.voice.chunker import SentenceChunker
 from griffin.voice.ptt import PushToTalkSession
 from griffin.voice.stt import SttError, transcribe
-from griffin.voice.tts import TTSPlayer, TtsError
+from griffin.voice.tts import TtsError, create_tts_player
 
 
 def _on_tool_call(name, tool_input):
@@ -47,7 +47,7 @@ def run_voice():
     confirmation_timeout = load_config().get("tools", {}).get("confirmation_timeout_seconds", 30)
     loop = ConversationLoop()
     try:
-        player = TTSPlayer()
+        player = create_tts_player()
     except TtsError as exc:
         print(f"[can't start voice mode: {exc}]")
         return
