@@ -4,7 +4,7 @@
 
 ## Run it
 
-The pipeline below is implemented, not just described: `python3 youtube_main.py` runs source → script → thumbnail-prompt → narration → video assembly end to end. `--dry-run` stops after the script and thumbnail prompt (no ElevenLabs or ffmpeg needed). `--background <path>` points at the visual loop/still to assemble the video against; without it, the run stops after narration audio. Needs `ANTHROPIC_API_KEY` and `ELEVENLABS_API_KEY` in `.env`, and `ffmpeg` on PATH for assembly. Outputs land in `data/youtube/<story-id>/`. Code lives in `griffin/youtube/` (`reddit.py`, `script.py`, `voice.py`, `thumbnail.py`, `assemble.py`, `pipeline.py`).
+The pipeline below is implemented, not just described: `python3 -m griffin.main` (run from the repo root) runs source → script → thumbnail-prompt → narration → video assembly end to end. `--dry-run` stops after the script and thumbnail prompt (no ElevenLabs or ffmpeg needed). `--background <path>` points at the visual loop/still to assemble the video against; without it, the run stops after narration audio. Needs `ANTHROPIC_API_KEY` and `ELEVENLABS_API_KEY` in `.env`, and `ffmpeg` on PATH for assembly. Outputs land in `data/youtube/<story-id>/`. Code lives in `griffin/youtube/` (`reddit.py`, `script.py`, `voice.py`, `thumbnail.py`, `assemble.py`, `pipeline.py`).
 
 ## The channel in one line
 

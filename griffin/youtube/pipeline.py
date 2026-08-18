@@ -1,7 +1,9 @@
 """End-to-end faceless-YouTube production pipeline: source a story, adapt
 it into a narration script, render narration audio, build a thumbnail
 prompt, and — given a background visual — assemble the finished video.
-Run it with `python3 youtube_main.py`, not this module directly.
+Run it with `python3 -m griffin.main` from the repo root, not this module
+directly — it lives inside the griffin package, so it needs `-m` (not a
+direct `python griffin/main.py`) to resolve the `griffin.*` imports.
 
 Outputs land under data/youtube/<story-id>/ (git-ignored, same convention
 as everything else in data/): source.txt, script.txt,
