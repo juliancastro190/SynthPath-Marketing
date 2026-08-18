@@ -13,5 +13,6 @@ Before doing ANY marketing work (writing copy, an ad, an email, a sales or opt-i
 - [[marketing-analytics]] — analytics, metrics, what to measure.
 - [[about]] — who jaredrhod is.
 - [[the-thesis]] — why the fundamentals matter more than the tools.
+- [[faceless-youtube]] — runbook for the faceless Reddit-horror YouTube channel: sourcing, scripting, voice, visuals, thumbnails, upload cadence, and what to measure.
 
 Source: [ai-marketing-skills](https://github.com/jaredrhod/ai-marketing-skills) by Jared Rhodenizer (@jaredrhod), CC BY-SA 4.0.
