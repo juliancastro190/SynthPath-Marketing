@@ -2,6 +2,10 @@
 
 **What this is:** the operating runbook for running a faceless Reddit-horror YouTube channel end to end — no camera, no host, just narration over visuals. This is written TO the AI assistant running the channel: read it before every production cycle, and treat it as the loop you execute, not background reading. (For the underlying content principles this pipeline is built on, see [[marketing-content]]. For how to read the channel's numbers, see [[marketing-analytics]]. For the always-read-first principles, see [[jareds-takes]].)
 
+## Run it
+
+The pipeline below is implemented, not just described: `python3 youtube_main.py` runs source → script → thumbnail-prompt → narration → video assembly end to end. `--dry-run` stops after the script and thumbnail prompt (no ElevenLabs or ffmpeg needed). `--background <path>` points at the visual loop/still to assemble the video against; without it, the run stops after narration audio. Needs `ANTHROPIC_API_KEY` and `ELEVENLABS_API_KEY` in `.env`, and `ffmpeg` on PATH for assembly. Outputs land in `data/youtube/<story-id>/`. Code lives in `griffin/youtube/` (`reddit.py`, `script.py`, `voice.py`, `thumbnail.py`, `assemble.py`, `pipeline.py`).
+
 ## The channel in one line
 
 Narrated Reddit horror stories (r/nosleep, r/letsnotmeet, r/shortscarystories, r/creepyencounters, r/thetruthishere, and similar) over dark ambient visuals, built for people who fall asleep or work with horror narration playing in the background. Faceless means the production is entirely: source story → script → voice → visuals → edit → thumbnail → title → upload. No stage needs a human face or on-camera talent, which means every stage is a task an assistant can actually own.
