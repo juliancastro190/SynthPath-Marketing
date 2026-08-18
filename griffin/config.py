@@ -17,3 +17,10 @@ ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWA
 # Which key to hold to talk. One of: ctrl_r, ctrl_l, alt_r, alt_l, space.
 # Defaults to right Ctrl so it never collides with normal typing.
 PTT_KEY_NAME = os.environ.get("GRIFFIN_PTT_KEY", "ctrl_r")
+
+# YouTube pipeline — Reddit story sourcing. Optional: unauthenticated
+# requests to reddit.com's public .json endpoints get blocked (403) for
+# many IPs now, so a free "script" app (reddit.com/prefs/apps) lets the
+# pipeline fetch via OAuth instead, which reddit.com does not block.
+REDDIT_CLIENT_ID = os.environ.get("REDDIT_CLIENT_ID")
+REDDIT_CLIENT_SECRET = os.environ.get("REDDIT_CLIENT_SECRET")
