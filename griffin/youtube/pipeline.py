@@ -1,7 +1,9 @@
 """End-to-end faceless-YouTube production pipeline: source a story, adapt
 it into a narration script, render narration audio, build a thumbnail
 prompt, and — given a background visual — assemble the finished video.
-Run it with `python3 youtube_main.py`, not this module directly.
+Run it with `python3 -m griffin.main` from the repo root, not this module
+directly — it lives inside the griffin package, so it needs `-m` (not a
+direct `python griffin/main.py`) to resolve the `griffin.*` imports.
 
 Outputs land under data/youtube/<story-id>/ (git-ignored, same convention
 as everything else in data/): source.txt, script.txt,
@@ -11,6 +13,8 @@ background asset was given.
 
 import argparse
 import os
+import re
+import time
 
 from griffin.brain.provider import ProviderError
 from griffin.storage import DATA_DIR
@@ -22,15 +26,49 @@ from griffin.youtube.voice import VoiceError
 OUTPUT_ROOT = os.path.join(DATA_DIR, "youtube")
 
 
-def run(subreddits=None, background_asset=None, dry_run=False):
-    print("Fetching candidate stories...")
-    candidates = reddit.fetch_candidates(subreddits=subreddits)
-    if not candidates:
-        print("No candidates found — try different subreddits or a longer timeframe.")
-        return None
+def load_story_file(path):
+    """Load a manually-sourced story, bypassing the Reddit fetch entirely —
+    for when reddit.com is unreachable (network block, no OAuth app set up
+    yet, etc.). File format: first line is the title, everything after the
+    next blank line is the story body. Copy-paste a story you read on your
+    phone or another device into a .txt file in this shape."""
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    title, _, body = text.partition("\n\n")
+    title = title.strip().lstrip("#").strip()
+    body = body.strip()
+    if not title or not body:
+        raise RedditError(
+            f"{path} doesn't look like title + blank line + story body — "
+            "put the title on the first line, a blank line, then the story."
+        )
+    slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:40] or "manual-story"
+    return {
+        "id": f"{slug}-{int(time.time())}",
+        "subreddit": "manual",
+        "title": title,
+        "author": "manual",
+        "body": body,
+        "permalink": path,
+        "score": None,
+    }
 
-    story = candidates[0]
-    print(f"Picked: r/{story['subreddit']} — {story['title']!r} (score {story['score']})")
+
+def run(subreddits=None, background_asset=None, dry_run=False, story_file=None):
+    if story_file:
+        print(f"Loading story from {story_file}...")
+        story = load_story_file(story_file)
+    else:
+        print("Fetching candidate stories...")
+        candidates = reddit.fetch_candidates(subreddits=subreddits)
+        if not candidates:
+            print("No candidates found — try different subreddits or a longer timeframe.")
+            return None
+        story = candidates[0]
+
+    source_label = f"r/{story['subreddit']}" if story["subreddit"] != "manual" else "manual story"
+    score_label = f" (score {story['score']})" if story["score"] is not None else ""
+    print(f"Picked: {source_label} — {story['title']!r}{score_label}")
 
     out_dir = os.path.join(OUTPUT_ROOT, story["id"])
     os.makedirs(out_dir, exist_ok=True)
@@ -81,6 +119,12 @@ def main():
         "--subreddit", action="append", dest="subreddits",
         help="Subreddit to pull from (repeatable). Defaults to the channel's standard list.",
     )
+    parser.add_argument(
+        "--story-file",
+        help="Skip the Reddit fetch and use a manually-sourced story instead — a .txt file with "
+             "the title on the first line, a blank line, then the story body. Use this if "
+             "reddit.com is unreachable from this network.",
+    )
     parser.add_argument("--background", help="Path to a background video/image loop for assembly.")
     parser.add_argument(
         "--dry-run", action="store_true",
@@ -88,7 +132,12 @@ def main():
     )
     args = parser.parse_args()
     try:
-        run(subreddits=args.subreddits, background_asset=args.background, dry_run=args.dry_run)
+        run(
+            subreddits=args.subreddits,
+            background_asset=args.background,
+            dry_run=args.dry_run,
+            story_file=args.story_file,
+        )
     except (RedditError, ProviderError, VoiceError, AssembleError) as exc:
         print(f"\n[pipeline stopped: {exc}]")
 
