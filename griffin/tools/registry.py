@@ -102,13 +102,14 @@ def build_default_registry(config=None):
     from griffin.heartbeat import notices
     from griffin.memory import store as memory
     from griffin.project_config import load_config
-    from griffin.tools import delegate, drafts, reminders, tasks
+    from griffin.tools import delegate, drafts, reminders, send, tasks
 
     config = config if config is not None else load_config()
     all_tools = [
         *reminders.TOOLS,
         *tasks.TOOLS,
         *drafts.TOOLS,
+        *send.TOOLS,
         *memory.TOOLS,
         *notices.TOOLS,
         *delegate.TOOLS,

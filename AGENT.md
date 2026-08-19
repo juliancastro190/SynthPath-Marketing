@@ -84,6 +84,26 @@ before starting work in a new session.
 - [x] Tier 6 — Rails: confirmation gate, config, audit log, kill switch
 - [x] Tier 7 — Team: specialist agents Griffin can delegate to
 - [x] Tier 8 — Team autonomy: a specialist can run on a schedule, no one asking
+- [x] Tier 9 — Send: a real, confirmation-gated send_email tool
+
+## Tier 9 — send
+
+`griffin/tools/send.py` closes the gap Tier 2 deliberately left open:
+`send_email` sends a previously saved draft (`draft_message`) as a real
+email over plain SMTP (`smtplib`, no new dependency — works with any
+provider, see `.env.example` for Gmail app-password setup). It acts on an
+existing draft rather than taking fresh text, so sending only ever
+happens to something that was already saved and could be reviewed first.
+`send_email` is in `config.yaml`'s `requires_confirmation` list — both
+Griffin directly and the marketing specialist have it.
+
+This also closes the loop `AGENT.md` had flagged as capping Tier 8's
+autonomy: since the heartbeat's `team_task` auto-declines every
+confirmation-gated tool the same way regardless of which one it is, a
+scheduled task can now genuinely *try* to send something and correctly
+fail to — verified directly, with `input()` poisoned to raise if touched
+at all, `smtplib.SMTP` mocked to prove no real send occurred, and the
+result confirming the gate held.
 
 ## Tier 8 — team autonomy
 
@@ -133,11 +153,6 @@ of a conversation.
 
 ## What's left for a fuller build (not started)
 
-- A real "send" capability (email/SMS) to wire the confirmation gate up
-  to an actual consequential action, instead of only `forget`. Drafting
-  (Tier 2) deliberately stops short of this — and it's also what caps
-  Tier 8's autonomy: a scheduled task can draft freely but can never send
-  anything on its own, by the same confirmation-gate logic that blocks
-  `youtube_produce` unattended.
+- SMS/text sending — send_email (Tier 9) covers email only.
 - A visual face, an always-on host, more specialists — see "Where to go
   after the baseline" in the original build doc.

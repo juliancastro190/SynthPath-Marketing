@@ -372,6 +372,39 @@ hits `youtube_produce` gets declined without ever touching it and files a
 notice explaining why — and, separately, a free-tool-only task completing
 normally and filing its own notice with the result.
 
+## Tier 9 — send
+
+Drafting (Tier 2) always stopped at saving a draft — sending was
+deliberately out of scope until now. `send_email` (`griffin/tools/send.py`)
+sends a saved draft as a real email over plain SMTP:
+
+```
+You: draft an email to sam@example.com, subject "lunch?", body "free thursday?"
+Griffin: Draft saved [id=a1b2c3d4] — nothing has been sent. ...
+You: send it
+  [using tool: send_email({'draft_id': 'a1b2c3d4'})]
+Griffin wants to: send this email to sam@example.com: "lunch?"
+
+free thursday?
+Proceed? [y/N]: y
+  [send_email result: Sent to sam@example.com at 2026-... Subject: lunch?]
+```
+
+Set up `SMTP_HOST`/`SMTP_USERNAME`/`SMTP_PASSWORD` in `.env` first — see
+`.env.example` for Gmail app-password steps (the common case) and other
+providers. `send_email` is in `config.yaml`'s `requires_confirmation`
+list, same as `forget` and `youtube_produce`; both Griffin directly and
+the marketing specialist can call it, always gated the same way.
+
+The interesting part is what this proves about Tier 8: since the
+heartbeat's confirmation-decline is generic (any gated tool, not a
+per-tool special case), a scheduled task can now genuinely attempt to
+send something on its own and correctly get blocked — verified with
+`input()` poisoned to raise if touched at all and `smtplib.SMTP` mocked
+to confirm no real send happened, only the gate's decline. I haven't sent
+a real email through a live SMTP account in this sandbox — that first
+real send is worth trying yourself once your `.env` is set up.
+
 ---
 
 Digital Marketing Platform

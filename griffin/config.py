@@ -34,3 +34,18 @@ HELICONE_BASE_URL = os.environ.get("HELICONE_BASE_URL", "https://anthropic.helic
 # login/password is used at runtime, just these two.
 REDDIT_CLIENT_ID = os.environ.get("REDDIT_CLIENT_ID")
 REDDIT_CLIENT_SECRET = os.environ.get("REDDIT_CLIENT_SECRET")
+
+# Tier 9 — the real send capability (griffin/tools/send.py). Plain SMTP,
+# not a third-party API: works with any provider (Gmail, Outlook, a
+# personal domain's mailbox), needs no new account, and uses only the
+# standard library (smtplib) — no new dependency. send_email is in
+# config.yaml's requires_confirmation list, same as any other "sends a
+# message" action; without these set, send_email raises a clear error
+# telling you to fill them in rather than silently failing.
+SMTP_HOST = os.environ.get("SMTP_HOST")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USERNAME = os.environ.get("SMTP_USERNAME")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
+# Defaults to the login username — most providers require the From address
+# to match the authenticated account anyway. Override if yours differs.
+SMTP_FROM_ADDRESS = os.environ.get("SMTP_FROM_ADDRESS") or SMTP_USERNAME

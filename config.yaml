@@ -11,6 +11,7 @@ tools:
   requires_confirmation:
     - forget
     - youtube_produce # the YouTube specialist's full pipeline — spends ElevenLabs API credits
+    - send_email # sends a real email — the actual "sending a message" case from AGENT.md's never-without-asking list
   # How long voice mode waits for a spoken yes/no before treating a
   # confirmation as declined. The text interface just blocks on a normal
   # prompt instead — there's no one to time out on when you're already

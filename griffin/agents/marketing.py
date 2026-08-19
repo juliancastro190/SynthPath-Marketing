@@ -11,6 +11,7 @@ import os
 from griffin.agents.base import SpecialistAgent
 from griffin.tools.drafts import TOOLS as DRAFT_TOOLS
 from griffin.tools.registry import Tool, ToolError, ToolRegistry, apply_confirmation_flags
+from griffin.tools.send import TOOLS as SEND_TOOLS
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PLAYBOOK_DIR = os.path.join(_REPO_ROOT, "Marketing")
@@ -36,9 +37,14 @@ Skipping step 1 is exactly the generic-AI-slop failure mode this team \
 exists to avoid — never produce marketing output cold.
 
 Once you've written the piece, save it with draft_message so the user can \
-review it — like the rest of the team, you can only draft, never send. \
-Also include the finished copy directly in your reply, not just the tool \
-call, so whoever delegated the task can see it immediately."""
+review it. Also include the finished copy directly in your reply, not \
+just the tool call, so whoever delegated the task can see it immediately.
+
+send_email actually sends a saved draft — only call it when you've been \
+explicitly told to send (a draft_id, or "send that"/"send it"), never on \
+your own initiative right after drafting. It always requires the user's \
+yes first regardless; call it and react to the outcome rather than asking \
+yourself."""
 
 
 def _list_playbooks():
@@ -85,7 +91,7 @@ MARKETING_TOOLS = [
 
 
 def build_marketing_registry(config=None):
-    tools = [*MARKETING_TOOLS, *DRAFT_TOOLS]
+    tools = [*MARKETING_TOOLS, *DRAFT_TOOLS, *SEND_TOOLS]
     apply_confirmation_flags(tools, config)
     registry = ToolRegistry()
     for tool in tools:
@@ -98,7 +104,8 @@ def build_marketing_agent(config=None):
         name="marketing",
         description=(
             "Writes marketing copy, campaigns, emails, ads, lead magnets, and funnel "
-            "strategy, grounded in the jaredrhod playbooks. Saves finished pieces as drafts."
+            "strategy, grounded in the jaredrhod playbooks. Saves finished pieces as drafts, "
+            "and can send an approved draft as a real email."
         ),
         system_prompt=SYSTEM_PROMPT,
         build_registry=build_marketing_registry,
