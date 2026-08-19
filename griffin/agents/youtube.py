@@ -39,10 +39,20 @@ rather than waiting. A generated story also has no rights/permission \
 question, unlike retelling someone else's Reddit post.
 
 Prefer youtube_draft unless the task explicitly asks for a finished, \
-narrated (or fully assembled) video. Report back which story source was \
-used (subreddit, or "AI-generated") and where the output landed."""
+narrated (or fully assembled) video. Both tools return the actual story/
+script/thumbnail-prompt text in the result, not just file paths — include \
+that text directly in your reply (don't just point at the file), along \
+with which story source was used (subreddit, or "AI-generated") and where \
+the output landed on disk."""
 
 _PIPELINE_ERRORS = (RedditError, ProviderError, VoiceError, AssembleError)
+
+# These are the pipeline's small text outputs — worth reading back in full
+# so the specialist (and Griffin, and the user) actually sees the story/
+# script instead of just a file listing. Anything else (narration.mp3,
+# video.mp4) is binary or large, so only its path is reported.
+_TEXT_FILES = {"source.txt", "script.txt", "thumbnail_prompt.txt", "video.srt"}
+_MAX_INLINE_CHARS = 8000
 
 
 def _run(tool_input, dry_run):
@@ -63,8 +73,19 @@ def _run(tool_input, dry_run):
 
     if out_dir is None:
         return "No candidate stories found — try different subreddits."
-    produced = sorted(os.listdir(out_dir))
-    return f"Produced under {out_dir}:\n" + "\n".join(f"- {name}" for name in produced)
+
+    parts = [f"Produced under {out_dir}:"]
+    for name in sorted(os.listdir(out_dir)):
+        path = os.path.join(out_dir, name)
+        if name not in _TEXT_FILES:
+            parts.append(f"- {name} (binary/large — not shown here; open {path} directly)")
+            continue
+        with open(path, encoding="utf-8") as f:
+            content = f.read()
+        if len(content) > _MAX_INLINE_CHARS:
+            content = content[:_MAX_INLINE_CHARS] + "\n[...truncated...]"
+        parts.append(f"\n--- {name} ---\n{content}")
+    return "\n".join(parts)
 
 
 def youtube_draft(tool_input):
