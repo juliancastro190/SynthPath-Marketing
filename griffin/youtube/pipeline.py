@@ -11,10 +11,11 @@ background asset was given.
 
 import argparse
 import os
+import uuid
 
 from griffin.brain.provider import ProviderError
 from griffin.storage import DATA_DIR
-from griffin.youtube import reddit, script as script_mod, thumbnail, voice
+from griffin.youtube import reddit, script as script_mod, story as story_mod, thumbnail, voice
 from griffin.youtube.assemble import AssembleError, assemble_video
 from griffin.youtube.reddit import RedditError
 from griffin.youtube.voice import VoiceError
@@ -22,21 +23,41 @@ from griffin.youtube.voice import VoiceError
 OUTPUT_ROOT = os.path.join(DATA_DIR, "youtube")
 
 
-def run(subreddits=None, background_asset=None, dry_run=False):
-    print("Fetching candidate stories...")
-    candidates = reddit.fetch_candidates(subreddits=subreddits)
-    if not candidates:
-        print("No candidates found — try different subreddits or a longer timeframe.")
-        return None
+def run(subreddits=None, background_asset=None, dry_run=False, generate=False, theme=None):
+    """`generate=True` writes an original story (story.py) instead of
+    sourcing one from Reddit — same downstream script/thumbnail/voice/
+    assembly pipeline either way, just a different story source."""
+    if generate:
+        print("Generating an original story...")
+        generated = story_mod.generate_story(theme=theme)
+        story = {
+            "id": uuid.uuid4().hex[:8],
+            "subreddit": None,
+            "title": generated["title"],
+            "author": None,
+            "permalink": None,
+            "body": generated["body"],
+            "score": None,
+        }
+        print(f"Generated: {story['title']!r}")
+    else:
+        print("Fetching candidate stories...")
+        candidates = reddit.fetch_candidates(subreddits=subreddits)
+        if not candidates:
+            print("No candidates found — try different subreddits or a longer timeframe.")
+            return None
 
-    story = candidates[0]
-    print(f"Picked: r/{story['subreddit']} — {story['title']!r} (score {story['score']})")
+        story = candidates[0]
+        print(f"Picked: r/{story['subreddit']} — {story['title']!r} (score {story['score']})")
 
     out_dir = os.path.join(OUTPUT_ROOT, story["id"])
     os.makedirs(out_dir, exist_ok=True)
 
     with open(os.path.join(out_dir, "source.txt"), "w") as f:
-        f.write(f"{story['title']}\n{story['permalink']}\nby u/{story['author']}\n\n{story['body']}")
+        if story["subreddit"]:
+            f.write(f"{story['title']}\n{story['permalink']}\nby u/{story['author']}\n\n{story['body']}")
+        else:
+            f.write(f"{story['title']}\n(AI-generated original story — not sourced from Reddit)\n\n{story['body']}")
 
     print("Adapting into a narration script...")
     narration_script = script_mod.adapt_story(story["title"], story["body"])
@@ -86,9 +107,20 @@ def main():
         "--dry-run", action="store_true",
         help="Only fetch + script + thumbnail prompt — skip narration audio and video (no ElevenLabs/ffmpeg needed).",
     )
+    parser.add_argument(
+        "--generate", action="store_true",
+        help="Write an original story instead of sourcing one from Reddit.",
+    )
+    parser.add_argument("--theme", help="Premise/theme to steer a --generate story. Ignored without --generate.")
     args = parser.parse_args()
     try:
-        run(subreddits=args.subreddits, background_asset=args.background, dry_run=args.dry_run)
+        run(
+            subreddits=args.subreddits,
+            background_asset=args.background,
+            dry_run=args.dry_run,
+            generate=args.generate,
+            theme=args.theme,
+        )
     except (RedditError, ProviderError, VoiceError, AssembleError) as exc:
         print(f"\n[pipeline stopped: {exc}]")
 

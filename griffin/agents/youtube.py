@@ -30,9 +30,17 @@ Two tools, same pipeline, different cost:
   result either way, so just call it and react rather than asking the \
   user yourself first.
 
+Each tool sources its story one of two ways: from Reddit (default), or, \
+if `generate` is true, an original AI-written story instead — pass an \
+optional `theme` to steer its premise. Use generate whenever the user asks \
+for an original/made-up story, or whenever Reddit sourcing is failing \
+(e.g. rate-limited or blocked) and the user is fine with a substitute \
+rather than waiting. A generated story also has no rights/permission \
+question, unlike retelling someone else's Reddit post.
+
 Prefer youtube_draft unless the task explicitly asks for a finished, \
-narrated (or fully assembled) video. Report back which subreddit/story \
-was picked and where the output landed."""
+narrated (or fully assembled) video. Report back which story source was \
+used (subreddit, or "AI-generated") and where the output landed."""
 
 _PIPELINE_ERRORS = (RedditError, ProviderError, VoiceError, AssembleError)
 
@@ -40,8 +48,16 @@ _PIPELINE_ERRORS = (RedditError, ProviderError, VoiceError, AssembleError)
 def _run(tool_input, dry_run):
     subreddits = tool_input.get("subreddits") or None
     background_asset = (tool_input.get("background_asset") or "").strip() or None
+    generate = bool(tool_input.get("generate"))
+    theme = (tool_input.get("theme") or "").strip() or None
     try:
-        out_dir = pipeline.run(subreddits=subreddits, background_asset=background_asset, dry_run=dry_run)
+        out_dir = pipeline.run(
+            subreddits=subreddits,
+            background_asset=background_asset,
+            dry_run=dry_run,
+            generate=generate,
+            theme=theme,
+        )
     except _PIPELINE_ERRORS as exc:
         raise ToolError(f"YouTube pipeline stopped: {exc}")
 
@@ -60,8 +76,12 @@ def youtube_produce(tool_input):
 
 
 def _describe_produce(tool_input):
-    subs = tool_input.get("subreddits")
-    source = ", ".join(subs) if subs else "the channel's default subreddits"
+    if tool_input.get("generate"):
+        theme = (tool_input.get("theme") or "").strip()
+        source = f"an AI-generated story ({theme})" if theme else "an AI-generated story"
+    else:
+        subs = tool_input.get("subreddits")
+        source = ", ".join(subs) if subs else "the channel's default subreddits"
     return f"produce a full YouTube video (renders narration audio via ElevenLabs — spends API credits) from {source}"
 
 
@@ -71,7 +91,15 @@ _INPUT_SCHEMA = {
         "subreddits": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "Subreddits to pull a candidate story from. Optional — defaults to the channel's standard list.",
+            "description": "Subreddits to pull a candidate story from. Ignored if generate is true. Optional — defaults to the channel's standard list.",
+        },
+        "generate": {
+            "type": "boolean",
+            "description": "Write an original AI-generated story instead of sourcing one from Reddit.",
+        },
+        "theme": {
+            "type": "string",
+            "description": "Premise/theme to steer a generated story. Only used when generate is true.",
         },
         "background_asset": {
             "type": "string",

@@ -263,7 +263,12 @@ included) pointed at a narrower job:
   (`griffin/youtube/pipeline.py`) as a delegated task instead of a
   standalone script. `youtube_draft` (story/script/thumbnail prompt) is
   free; `youtube_produce` (adds narration audio via ElevenLabs) spends API
-  credits, so it's in `config.yaml`'s `requires_confirmation` list.
+  credits, so it's in `config.yaml`'s `requires_confirmation` list. Either
+  tool can source its story from Reddit (default) or write an original
+  one instead (`generate: true`, optional `theme`) via
+  `griffin/youtube/story.py` — useful both when you want a made-up story
+  and as a fallback when Reddit sourcing is blocked, and it sidesteps the
+  reuse/permission question a retold Reddit story carries.
 - **research** — fetches a URL and reads it (`fetch_url`), the only tool
   in the project that reads untrusted external content for real. Its
   system prompt treats whatever a page says as data, never as
