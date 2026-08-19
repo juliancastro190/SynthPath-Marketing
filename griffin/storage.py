@@ -8,9 +8,21 @@ open and inspect (or edit) by hand.
 
 import json
 import os
+import tempfile
+import threading
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(_REPO_ROOT, "data")
+
+# The heartbeat (Tier 8) can run several checks concurrently, each in its
+# own thread, and more than one can share the same file (every check's
+# next-due time lives together in heartbeat_state.json) — an
+# unsynchronized read-modify-write from two threads at once was observed
+# to corrupt the file (interleaved writes producing invalid JSON). This
+# lock serializes all load/save calls within the process; save() also
+# writes atomically (temp file + rename) so a hard crash mid-write can't
+# leave a half-written file behind either.
+_lock = threading.Lock()
 
 
 def _path(filename):
@@ -19,13 +31,23 @@ def _path(filename):
 
 
 def load(filename, default):
-    path = _path(filename)
-    if not os.path.exists(path):
-        return default
-    with open(path) as f:
-        return json.load(f)
+    with _lock:
+        path = _path(filename)
+        if not os.path.exists(path):
+            return default
+        with open(path) as f:
+            return json.load(f)
 
 
 def save(filename, data):
-    with open(_path(filename), "w") as f:
-        json.dump(data, f, indent=2)
+    with _lock:
+        path = _path(filename)
+        fd, tmp_path = tempfile.mkstemp(dir=DATA_DIR, prefix=f".{filename}.", suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w") as f:
+                json.dump(data, f, indent=2)
+            os.replace(tmp_path, path)
+        except BaseException:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            raise
