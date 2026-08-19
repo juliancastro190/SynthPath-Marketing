@@ -9,7 +9,14 @@ import anthropic
 
 from griffin.config import ANTHROPIC_API_KEY, HELICONE_API_KEY, HELICONE_BASE_URL, MODEL_NAME
 
-MAX_TOKENS = 1024
+# 1024 was plenty for Griffin's original short conversational replies and
+# tool calls, but the youtube specialist's story generation (script.py's
+# SYSTEM_PROMPT explicitly asks for ~1500-2500 words, roughly 2000-3500
+# tokens) blew straight through it — live-tested and every generated story
+# was cut off mid-sentence. This is a shared cap across every call, not a
+# target length, so raising it doesn't change anything about short replies;
+# Claude still stops on its own via stop_reason="end_turn" either way.
+MAX_TOKENS = 4096
 
 _client = None
 
