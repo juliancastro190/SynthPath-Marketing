@@ -57,7 +57,7 @@ def read_playbook(tool_input):
     files = _list_playbooks()
     if name not in files:
         raise ToolError(f"No such playbook: '{name}'. Available: {', '.join(files) or '(none)'}.")
-    with open(os.path.join(PLAYBOOK_DIR, name)) as f:
+    with open(os.path.join(PLAYBOOK_DIR, name), encoding="utf-8") as f:
         return f.read()
 
 

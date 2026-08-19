@@ -53,7 +53,7 @@ def run(subreddits=None, background_asset=None, dry_run=False, generate=False, t
     out_dir = os.path.join(OUTPUT_ROOT, story["id"])
     os.makedirs(out_dir, exist_ok=True)
 
-    with open(os.path.join(out_dir, "source.txt"), "w") as f:
+    with open(os.path.join(out_dir, "source.txt"), "w", encoding="utf-8") as f:
         if story["subreddit"]:
             f.write(f"{story['title']}\n{story['permalink']}\nby u/{story['author']}\n\n{story['body']}")
         else:
@@ -62,13 +62,13 @@ def run(subreddits=None, background_asset=None, dry_run=False, generate=False, t
     print("Adapting into a narration script...")
     narration_script = script_mod.adapt_story(story["title"], story["body"])
     script_path = os.path.join(out_dir, "script.txt")
-    with open(script_path, "w") as f:
+    with open(script_path, "w", encoding="utf-8") as f:
         f.write(narration_script)
     print(f"Script written to {script_path}")
 
     print("Building thumbnail prompt...")
     prompt = thumbnail.build_thumbnail_prompt(story["title"], narration_script)
-    with open(os.path.join(out_dir, "thumbnail_prompt.txt"), "w") as f:
+    with open(os.path.join(out_dir, "thumbnail_prompt.txt"), "w", encoding="utf-8") as f:
         f.write(prompt)
     print("Thumbnail prompt saved — paste it into your AI image tool.")
 

@@ -35,7 +35,7 @@ def load(filename, default):
         path = _path(filename)
         if not os.path.exists(path):
             return default
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
 
 
@@ -44,7 +44,7 @@ def save(filename, data):
         path = _path(filename)
         fd, tmp_path = tempfile.mkstemp(dir=DATA_DIR, prefix=f".{filename}.", suffix=".tmp")
         try:
-            with os.fdopen(fd, "w") as f:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
             os.replace(tmp_path, path)
         except BaseException:

@@ -65,7 +65,7 @@ def build_captions_srt(script_text, total_duration, out_path, max_chars=70):
 
     total_chars = sum(len(chunk) for chunk in chunks)
     cursor = 0.0
-    with open(out_path, "w") as f:
+    with open(out_path, "w", encoding="utf-8") as f:
         for index, chunk in enumerate(chunks, start=1):
             duration = total_duration * (len(chunk) / total_chars)
             start, end = cursor, cursor + duration

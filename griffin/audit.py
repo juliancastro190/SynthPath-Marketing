@@ -32,7 +32,7 @@ def _append(entry):
     os.makedirs(storage.DATA_DIR, exist_ok=True)
     entry = {"at": datetime.now(timezone.utc).isoformat(), **entry}
     log_path = os.path.join(storage.DATA_DIR, LOG_FILENAME)
-    with open(log_path, "a") as f:
+    with open(log_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
 
 
