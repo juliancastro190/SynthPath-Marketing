@@ -51,7 +51,11 @@ def log_tool_call(name, tool_input, required_confirmation, approved, result_text
 
 
 def log_heartbeat_notice(check_name, message, severity):
-    _append({"type": "heartbeat_notice", "check": check_name, "severity": severity, "message": message})
+    # "check_name" rather than "check" — CHECK is a reserved SQL keyword,
+    # and lnav (see the Tier 7 log-viewer format) exposes JSON log fields
+    # as a queryable SQL table, so an unquoted "check" column breaks its
+    # generated CREATE TABLE.
+    _append({"type": "heartbeat_notice", "check_name": check_name, "severity": severity, "message": message})
 
 
 def log_model_usage(model, input_tokens, output_tokens):

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://lnav.org/schemas/format-v1.schema.json",
+  "griffin_audit_log": {
+    "title": "Griffin audit log",
+    "description": "Tier 6 audit trail: every tool call (Griffin's and every specialist's), heartbeat notice, and model-usage event, from data/audit.log.",
+    "json": true,
+    "file-pattern": "audit\\.log$",
+    "timestamp-field": "at",
+    "hide-extra": true,
+    "level-field": "is_error",
+    "level": {
+      "error": "true"
+    },
+    "line-format": [
+      {"field": "at"},
+      " ",
+      {"field": "type", "min-width": 16},
+      " ",
+      {"field": "tool", "default-value": ""},
+      {"field": "check_name", "default-value": ""},
+      {"field": "model", "default-value": ""},
+      " ",
+      {"field": "message", "default-value": ""},
+      {"field": "result", "default-value": "", "max-width": 300}
+    ],
+    "value": {
+      "type": {"kind": "string", "identifier": true},
+      "tool": {"kind": "string", "identifier": true},
+      "input": {"kind": "json"},
+      "required_confirmation": {"kind": "string"},
+      "approved": {"kind": "string"},
+      "is_error": {"kind": "string"},
+      "result": {"kind": "string"},
+      "check_name": {"kind": "string", "identifier": true},
+      "severity": {"kind": "string", "identifier": true},
+      "message": {"kind": "string"},
+      "model": {"kind": "string", "identifier": true},
+      "input_tokens": {"kind": "integer"},
+      "output_tokens": {"kind": "integer"},
+      "estimated_cost_usd": {"kind": "float"},
+      "running_total_usd": {"kind": "float"}
+    }
+  }
+}
