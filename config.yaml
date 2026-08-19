@@ -32,6 +32,23 @@ heartbeat:
       stale_after_minutes: 1440 # 24h — open this long counts as stale
       alert_threshold: 3 # more than this many stale items -> alert, not just a log entry
 
+    # A specialist runs a task on its own schedule, no one asking each
+    # time — Tier 8. Disabled by default: turn on once you're happy with
+    # what it produces. Nobody's necessarily watching when this fires, so
+    # anything confirmation-gated (e.g. youtube_produce) just gets
+    # auto-declined rather than hanging — keep the task itself to
+    # free/non-consequential work, like this one does (script + thumbnail
+    # prompt only, no ElevenLabs spend).
+    - name: weekly_youtube_draft
+      type: team_task
+      enabled: false
+      interval_seconds: 604800 # weekly
+      specialist: youtube
+      task: >
+        Source a story and write the narration script and thumbnail
+        prompt for this week's video. Use youtube_draft only — do not
+        render narration audio or assemble video.
+
 kill_switch:
   # One switch to pause all proactive behavior at once. The heartbeat
   # process keeps running and re-reads this file every tick, so flipping

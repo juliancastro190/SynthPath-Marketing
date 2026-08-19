@@ -50,13 +50,21 @@ class SpecialistAgent:
         tag = "error" if is_error else "result"
         print(f"  [{self.name} {tag}: {result_text}]")
 
-    def run_task(self, task_text):
+    def run_task(self, task_text, on_confirm=None):
         """Run one delegated task to completion and return the specialist's
         final text reply (never raises ToolError/ProviderError itself —
         griffin/tools/delegate.py is what turns a failure into one). Prints
         its own tool activity live to the console as it goes — see the
         module docstring for why that can't just flow through the outer
-        loop's own hooks."""
+        loop's own hooks.
+
+        `on_confirm` defaults to a blocking console prompt, right for a task
+        delegated from a live conversation someone is sitting at. A caller
+        with nobody watching (the heartbeat, see griffin/heartbeat/checks.py)
+        must pass its own non-blocking confirm instead — the same rule the
+        heartbeat runner already documents for itself: a consequential
+        action with no one there to ask defaults to not happening, not to
+        hanging forever waiting for an answer that will never come."""
         loop = ConversationLoop(
             system_prompt=self._system_prompt,
             registry=self._build_registry(self._config),
@@ -68,7 +76,7 @@ class SpecialistAgent:
             on_text=chunks.append,
             on_tool_call=self._on_tool_call,
             on_tool_result=self._on_tool_result,
-            on_confirm=self._confirm,
+            on_confirm=on_confirm or self._confirm,
         )
         text = "".join(chunks).strip()
         return text or "(no reply)"

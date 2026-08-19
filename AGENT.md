@@ -83,6 +83,31 @@ before starting work in a new session.
 - [x] Tier 5 — Heartbeat: proactive background loop
 - [x] Tier 6 — Rails: confirmation gate, config, audit log, kill switch
 - [x] Tier 7 — Team: specialist agents Griffin can delegate to
+- [x] Tier 8 — Team autonomy: a specialist can run on a schedule, no one asking
+
+## Tier 8 — team autonomy
+
+The heartbeat (Tier 5) can now run a specialist on its own schedule via a
+new check type, `team_task` (`griffin/heartbeat/checks.py`) — config needs
+`specialist` and `task`; see `config.yaml`'s `weekly_youtube_draft`
+example (disabled by default — opt in per check). This is the actual
+"does tasks on its own" behavior from the original ask, not just
+on-demand delegation.
+
+The one thing that had to change to make this safe: `SpecialistAgent.
+run_task` (Tier 7) defaulted to a *blocking* `input()` for its
+confirmation gate, which is fine from a live conversation but would hang
+the heartbeat's background thread forever the first time a scheduled task
+hit something confirmation-gated (e.g. `youtube_produce`) with nobody at
+the keyboard to answer. `run_task` now takes an optional `on_confirm`
+override; `team_task` passes one that always declines instead of
+blocking — same "safe default: don't do it, leave a notice" rule the
+heartbeat runner already documented for itself before any check actually
+needed it. Verified directly: `input()` poisoned to raise if called at
+all, task hits `youtube_produce`, gets declined without ever touching
+`input()`, files a notice explaining why instead of hanging — and,
+separately, the free-tool-only happy path completing normally and filing
+its own notice.
 
 ## Tier 7 — the team
 
@@ -102,16 +127,17 @@ pointed at a narrower job via its own system prompt and scoped tools:
 
 Griffin reaches the team via one new tool, `delegate_task`
 (`griffin/tools/delegate.py`) — from the outer loop's point of view it's
-just another tool call that runs to completion and returns text. This is
-on-demand delegation only: nothing runs on a schedule yet.
+just another tool call that runs to completion and returns text. Tier 8
+above adds the other way in: a specialist run from the heartbeat instead
+of a conversation.
 
 ## What's left for a fuller build (not started)
 
 - A real "send" capability (email/SMS) to wire the confirmation gate up
   to an actual consequential action, instead of only `forget`. Drafting
-  (Tier 2) deliberately stops short of this.
-- Heartbeat-driven autonomy for the team (a specialist picking up
-  recurring work on its own, e.g. "produce this week's video") — Tier 7
-  is on-demand delegation only so far.
+  (Tier 2) deliberately stops short of this — and it's also what caps
+  Tier 8's autonomy: a scheduled task can draft freely but can never send
+  anything on its own, by the same confirmation-gate logic that blocks
+  `youtube_produce` unattended.
 - A visual face, an always-on host, more specialists — see "Where to go
   after the baseline" in the original build doc.

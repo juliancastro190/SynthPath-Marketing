@@ -51,6 +51,48 @@ def stale_open_items(check_config, now=None):
     return [(message, severity)]
 
 
+def _decline_unattended(tool_name, tool_input, description):
+    # The heartbeat runs on its own background thread with nobody at the
+    # keyboard to ask, so a confirmation-gated tool call must not block on
+    # input() forever — same "safe default: don't do it, leave a notice"
+    # rule the runner documents for itself. This means a scheduled task
+    # can never complete anything consequential (e.g. youtube_produce)
+    # fully unattended, by design; it can still do everything free/
+    # non-gated and report back what it got done and what it couldn't.
+    return False
+
+
+def team_task(check_config, now=None):
+    """Runs a specialist on a fixed schedule without anyone asking it to —
+    e.g. "write this week's video script." Config needs `specialist` (a
+    name from griffin/agents/team.py) and `task` (plain-language
+    instructions). Always worth a look when it produces something, so this
+    reports as "alert" (subject to quiet hours, like any other alert) —
+    the whole point of scheduling one is that it makes something new."""
+    from griffin.agents.team import SPECIALISTS
+
+    check_name = check_config.get("name", "team_task")
+    specialist_name = check_config.get("specialist")
+    task = check_config.get("task")
+    if not specialist_name or not task:
+        return [(f"'{check_name}' is misconfigured — needs both 'specialist' and 'task' set.", "alert")]
+
+    specialist = SPECIALISTS.get(specialist_name)
+    if specialist is None:
+        available = ", ".join(sorted(SPECIALISTS))
+        return [(f"'{check_name}' names unknown specialist '{specialist_name}'. Available: {available}.", "alert")]
+
+    try:
+        result = specialist.run_task(task, on_confirm=_decline_unattended)
+    except Exception as exc:
+        return [(f"[{specialist_name}] scheduled task failed: {exc}", "alert")]
+
+    if len(result) > 400:
+        result = result[:400] + "… (full output in data/audit.log)"
+    return [(f"[{specialist_name}] finished a scheduled task — {result}", "alert")]
+
+
 CHECK_FUNCTIONS = {
     "stale_open_items": stale_open_items,
+    "team_task": team_task,
 }

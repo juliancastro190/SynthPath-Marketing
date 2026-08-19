@@ -348,6 +348,30 @@ changes. I verified the client is built with the right `base_url` and
 auth header when the key is set, and untouched when it isn't — I haven't
 exercised a live Helicone account against real traffic in this sandbox.
 
+## Tier 8 — team autonomy
+
+The team can now run without anyone asking. `config.yaml`'s heartbeat
+`checks` support a new type, `team_task`, which runs a named specialist
+on a fixed interval — see the (disabled by default) `weekly_youtube_draft`
+example there. Flip its `enabled: true` and run `heartbeat_main.py`
+alongside `main.py`, and it'll fire on schedule and file a notice with
+what it produced, the same "While you were away" mechanism Tier 5 already
+uses for stale-item alerts.
+
+**What it can't do unattended, on purpose:** anything confirmation-gated.
+`SpecialistAgent.run_task`'s confirm callback normally blocks on a console
+prompt, which is fine live but would hang the heartbeat's background
+thread forever the first time a scheduled task hit `youtube_produce` with
+nobody there to answer. A heartbeat-triggered task now passes a
+non-blocking confirm that always declines instead — so a scheduled
+`team_task` can draft freely but can never spend money or do anything
+else gated, exactly like the confirmation gate already governs a live
+conversation, just defaulting to "don't" instead of hanging. I verified
+this directly: `input()` poisoned to raise if called at all, a task that
+hits `youtube_produce` gets declined without ever touching it and files a
+notice explaining why — and, separately, a free-tool-only task completing
+normally and filing its own notice with the result.
+
 ---
 
 Digital Marketing Platform
