@@ -75,6 +75,26 @@ class ToolRegistry:
             raise ToolError(f"The '{name}' tool failed: {exc}")
 
 
+def apply_confirmation_flags(tools, config=None):
+    """Set each tool's requires_confirmation flag from config.yaml's
+    tools.requires_confirmation list (Tier 6). Shared by the orchestrator's
+    default registry and every specialist's scoped registry (griffin/agents/)
+    so a name added to that list is honored everywhere the tool is
+    reachable, not just from Griffin directly. Tool objects are often
+    module-level singletons reused across several registries (e.g.
+    draft_message, shared by Griffin and the marketing specialist), so this
+    must set the flag both ways rather than only ever turning it on —
+    otherwise a later build with a different config could inherit a stale
+    value from a build done elsewhere.
+    """
+    from griffin.project_config import load_config
+
+    config = config if config is not None else load_config()
+    confirm_names = set(config.get("tools", {}).get("requires_confirmation", []))
+    for tool in tools:
+        tool.requires_confirmation = tool.name in confirm_names
+
+
 def build_default_registry(config=None):
     # Imported lazily to avoid a circular import: each tool module (and the
     # memory store, and the heartbeat's notice inbox) imports Tool/ToolError
@@ -82,17 +102,20 @@ def build_default_registry(config=None):
     from griffin.heartbeat import notices
     from griffin.memory import store as memory
     from griffin.project_config import load_config
-    from griffin.tools import drafts, reminders, tasks
+    from griffin.tools import delegate, drafts, reminders, tasks
 
     config = config if config is not None else load_config()
-    confirm_names = set(config.get("tools", {}).get("requires_confirmation", []))
+    all_tools = [
+        *reminders.TOOLS,
+        *tasks.TOOLS,
+        *drafts.TOOLS,
+        *memory.TOOLS,
+        *notices.TOOLS,
+        *delegate.TOOLS,
+    ]
+    apply_confirmation_flags(all_tools, config)
 
     registry = ToolRegistry()
-    for tool in [*reminders.TOOLS, *tasks.TOOLS, *drafts.TOOLS, *memory.TOOLS, *notices.TOOLS]:
-        # Tool objects are module-level singletons reused across calls, so
-        # this must set the flag both ways rather than only ever turning
-        # it on — otherwise a later build with a different config could
-        # inherit a stale True from an earlier one.
-        tool.requires_confirmation = tool.name in confirm_names
+    for tool in all_tools:
         registry.register(tool)
     return registry

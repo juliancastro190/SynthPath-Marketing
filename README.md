@@ -247,6 +247,60 @@ the question naming the actual fact, and only deleted it after a
 simulated spoken "yes" — including the timeout-to-declined path when no
 answer ever comes.
 
+## Tier 7 — the team
+
+Griffin is now the orchestrator of a small team rather than a solo
+assistant. Three specialists live under `griffin/agents/`, each the same
+brain as Griffin (conversation loop + tool registry, confirmation gate
+included) pointed at a narrower job:
+
+- **marketing** — writes copy, campaigns, emails, and funnel strategy,
+  grounded in the jaredrhod playbooks under `Marketing/`. It always reads
+  `jareds-takes.md` (and whichever playbook matches the task) before
+  writing anything, then saves the result with `draft_message` — same
+  draft-only rule as the rest of the team.
+- **youtube** — drives the existing faceless-Reddit-horror pipeline
+  (`griffin/youtube/pipeline.py`) as a delegated task instead of a
+  standalone script. `youtube_draft` (story/script/thumbnail prompt) is
+  free; `youtube_produce` (adds narration audio via ElevenLabs) spends API
+  credits, so it's in `config.yaml`'s `requires_confirmation` list.
+- **research** — fetches a URL and reads it (`fetch_url`), the only tool
+  in the project that reads untrusted external content for real. Its
+  system prompt treats whatever a page says as data, never as
+  instructions — the same posture Tier 6 established for tool
+  results/memory, now exercised against an actual external source.
+
+There's no new command to run — Griffin decides on its own, mid-conversation,
+whether a task fits a specialist better than doing it directly, via one new
+tool: `delegate_task`. Try it against the existing `main.py`:
+
+```
+You: draft a subject line for a lead magnet email about a free onboarding checklist
+  [using tool: delegate_task({'specialist': 'marketing', 'task': '...'})]
+You: source a horror story from r/nosleep and write the narration script (don't render audio)
+  [using tool: delegate_task({'specialist': 'youtube', 'task': '...'})]
+You: what does https://example.com say?
+  [using tool: delegate_task({'specialist': 'research', 'task': '...'})]
+```
+
+A delegated task runs the specialist's own tool-call loop to completion on
+a fresh history — it doesn't share Griffin's conversation or memory, only
+its final answer comes back, exactly like any other tool result. If the
+specialist tries something confirmation-gated (right now: `youtube_produce`),
+you'll see that specialist's own `[name] wants to: ...` prompt, same
+mechanics as Tier 6, before it runs.
+
+I verified this directly with a stubbed model provider (no live API calls):
+a full orchestrator → specialist → orchestrator round trip through
+`delegate_task` returning the specialist's real final text, and the
+confirmation gate correctly blocking `youtube_produce` when declined from
+inside the nested loop. I haven't exercised `research`'s `fetch_url`
+against a live network call or the `marketing`/`youtube` specialists
+against a real model in this sandbox — the wiring is verified, the actual
+model judgment (which specialist to pick, whether the marketing agent
+reads the right playbook) is worth trying yourself once you have a working
+`ANTHROPIC_API_KEY`.
+
 ---
 
 Digital Marketing Platform

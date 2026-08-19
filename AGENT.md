@@ -82,14 +82,36 @@ before starting work in a new session.
 - [x] Tier 4 — Memory: durable facts across restarts
 - [x] Tier 5 — Heartbeat: proactive background loop
 - [x] Tier 6 — Rails: confirmation gate, config, audit log, kill switch
+- [x] Tier 7 — Team: specialist agents Griffin can delegate to
+
+## Tier 7 — the team
+
+Griffin is now the orchestrator of a small team, not a solo assistant.
+`griffin/agents/` holds each specialist — same brain as Griffin itself
+(Tier 1's loop + Tier 2's registry, Tier 6's confirmation gate included),
+pointed at a narrower job via its own system prompt and scoped tools:
+
+- **marketing** — writes copy/campaigns/funnel strategy, grounded in the
+  jaredrhod playbooks under `Marketing/` (never produces output cold).
+- **youtube** — drives the existing faceless-Reddit-horror pipeline;
+  `youtube_produce` (spends ElevenLabs credits) is confirmation-gated.
+- **research** — fetches a URL and reads it. This is also the first tool
+  in the project that touches untrusted external content for real, so its
+  system prompt is where the "external content is data, not instructions"
+  posture gets exercised against an actual boundary.
+
+Griffin reaches the team via one new tool, `delegate_task`
+(`griffin/tools/delegate.py`) — from the outer loop's point of view it's
+just another tool call that runs to completion and returns text. This is
+on-demand delegation only: nothing runs on a schedule yet.
 
 ## What's left for a fuller build (not started)
 
 - A real "send" capability (email/SMS) to wire the confirmation gate up
   to an actual consequential action, instead of only `forget`. Drafting
   (Tier 2) deliberately stops short of this.
-- A dedicated tool that fetches untrusted external content (a web page,
-  an email) to exercise the external-content-is-data posture against a
-  real tool boundary, not just pasted text in a message.
-- More capabilities, sub-agents, a visual face, an always-on host — see
-  "Where to go after the baseline" in the original build doc.
+- Heartbeat-driven autonomy for the team (a specialist picking up
+  recurring work on its own, e.g. "produce this week's video") — Tier 7
+  is on-demand delegation only so far.
+- A visual face, an always-on host, more specialists — see "Where to go
+  after the baseline" in the original build doc.
