@@ -25,3 +25,12 @@ PTT_KEY_NAME = os.environ.get("GRIFFIN_PTT_KEY", "ctrl_r")
 # Helicone instead, so it shows up as a live trace in Helicone's dashboard.
 HELICONE_API_KEY = os.environ.get("HELICONE_API_KEY")
 HELICONE_BASE_URL = os.environ.get("HELICONE_BASE_URL", "https://anthropic.helicone.ai")
+
+# Tier 7 — YouTube specialist's Reddit story sourcing. Optional but
+# recommended: Reddit increasingly 403s its unauthenticated JSON endpoint
+# regardless of User-Agent, so without these, story fetching is unreliable
+# (see griffin/youtube/reddit.py). A free "script" app at
+# https://www.reddit.com/prefs/apps gives you both values — no Reddit
+# login/password is used at runtime, just these two.
+REDDIT_CLIENT_ID = os.environ.get("REDDIT_CLIENT_ID")
+REDDIT_CLIENT_SECRET = os.environ.get("REDDIT_CLIENT_SECRET")
