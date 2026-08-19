@@ -17,3 +17,11 @@ ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWA
 # Which key to hold to talk. One of: ctrl_r, ctrl_l, alt_r, alt_l, space.
 # Defaults to right Ctrl so it never collides with normal typing.
 PTT_KEY_NAME = os.environ.get("GRIFFIN_PTT_KEY", "ctrl_r")
+
+# Tier 7 — optional third-party observability (Helicone). Unset by default,
+# which leaves every request going straight to Anthropic exactly as before;
+# setting HELICONE_API_KEY proxies every model call (Griffin's and every
+# specialist's, since they all go through the one provider seam) through
+# Helicone instead, so it shows up as a live trace in Helicone's dashboard.
+HELICONE_API_KEY = os.environ.get("HELICONE_API_KEY")
+HELICONE_BASE_URL = os.environ.get("HELICONE_BASE_URL", "https://anthropic.helicone.ai")

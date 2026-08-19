@@ -301,6 +301,48 @@ model judgment (which specialist to pick, whether the marketing agent
 reads the right playbook) is worth trying yourself once you have a working
 `ANTHROPIC_API_KEY`.
 
+### Watching the team work
+
+There's no dashboard — this is still a CLI-first project — but there are
+now two real places to see what the team is doing:
+
+**Live, in the terminal.** A specialist's own tool calls happen inside a
+single `delegate_task` call, so `main.py`/`voice_main.py`'s usual
+`on_tool_call`/`on_tool_result` hooks never see them on their own.
+`SpecialistAgent.run_task` (`griffin/agents/base.py`) prints its own
+`[name using tool: ...]` / `[name result: ...]` lines as it goes, in the
+same bracket format Griffin already uses, so a delegated task's real
+progress shows up live rather than going silent until it returns.
+
+**After the fact, via `data/audit.log`.** Tier 6's audit trail already
+records every tool call from Griffin *and* every specialist (delegation
+runs through the same `ConversationLoop`, so it hits the same audit
+hook) — nothing new needed there. To browse it properly instead of
+reading raw JSON lines, install [lnav](https://lnav.org) and drop in the
+format this project ships:
+
+```
+mkdir -p ~/.lnav/formats/griffin-audit-log
+cp tools/lnav/griffin-audit-log/format.json ~/.lnav/formats/griffin-audit-log/format.json
+lnav data/audit.log
+```
+
+That gives you parsed timestamps, failed tool calls highlighted, and a
+queryable table — e.g. inside lnav, `;SELECT log_time, tool, approved,
+result FROM griffin_audit_log WHERE tool = 'youtube_produce'`. I built and
+tested this format against a real generated `audit.log` in this sandbox
+(config-checked with `lnav -C`, rendered, and queried via SQL) — it works.
+
+**A hosted live dashboard, optionally.** Set `HELICONE_API_KEY` in `.env`
+(see `.env.example`) and every model call — Griffin's and every
+specialist's, including the tool-use JSON — gets proxied through
+[Helicone](https://helicone.ai) instead of hitting Anthropic directly, so
+it shows up as a live trace in their web dashboard. This is the one piece
+here that sends your data to a third party, so it's opt-in: unset, nothing
+changes. I verified the client is built with the right `base_url` and
+auth header when the key is set, and untouched when it isn't — I haven't
+exercised a live Helicone account against real traffic in this sandbox.
+
 ---
 
 Digital Marketing Platform

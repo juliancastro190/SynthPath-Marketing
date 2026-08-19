@@ -7,7 +7,7 @@ added, or costs get logged in one place later.
 
 import anthropic
 
-from griffin.config import ANTHROPIC_API_KEY, MODEL_NAME
+from griffin.config import ANTHROPIC_API_KEY, HELICONE_API_KEY, HELICONE_BASE_URL, MODEL_NAME
 
 MAX_TOKENS = 1024
 
@@ -28,7 +28,15 @@ def _get_client():
             raise ProviderError(
                 "No ANTHROPIC_API_KEY is set. Copy .env.example to .env and add your key."
             )
-        _client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        kwargs = {"api_key": ANTHROPIC_API_KEY}
+        if HELICONE_API_KEY:
+            # Proxy through Helicone instead of hitting Anthropic directly —
+            # every request/response (including tool calls) then shows up
+            # as a live trace in Helicone's dashboard. Anthropic still gets
+            # the request either way; Helicone just sits in front of it.
+            kwargs["base_url"] = HELICONE_BASE_URL
+            kwargs["default_headers"] = {"Helicone-Auth": f"Bearer {HELICONE_API_KEY}"}
+        _client = anthropic.Anthropic(**kwargs)
     return _client
 
 
