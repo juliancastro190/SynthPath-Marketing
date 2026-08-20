@@ -77,9 +77,39 @@ def _network_diagnostic():
         return
     try:
         resp = requests.get("https://api.anthropic.com", timeout=10)
-        print(f"  HTTPS GET: OK -- status {resp.status_code}")
+        print(f"  requests HTTPS GET: OK -- status {resp.status_code}")
     except requests.RequestException as exc:
-        print(f"  HTTPS GET: FAILED -- {type(exc).__name__}: {exc}")
+        print(f"  requests HTTPS GET: FAILED -- {type(exc).__name__}: {exc}")
+
+    # The anthropic SDK uses httpx, not requests -- a different HTTP
+    # client/network stack. Test it directly, since requests succeeding
+    # doesn't rule out something httpx-specific (HTTP/2 negotiation,
+    # connection pooling, a different default timeout).
+    try:
+        import httpx
+
+        resp = httpx.get("https://api.anthropic.com", timeout=10)
+        print(f"  httpx HTTPS GET: OK -- status {resp.status_code}")
+    except Exception as exc:
+        print(f"  httpx HTTPS GET: FAILED -- {type(exc).__name__}: {exc}")
+
+    # The real thing: a genuine minimal call through the exact client
+    # provider.py builds, with the real underlying exception printed in
+    # full — provider.py deliberately replaces it with a generic
+    # friendly message before it ever reaches here, which is exactly
+    # what's been hiding the actual cause so far.
+    try:
+        import anthropic
+
+        from griffin.config import ANTHROPIC_API_KEY, MODEL_NAME
+
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        resp = client.messages.create(
+            model=MODEL_NAME, max_tokens=8, messages=[{"role": "user", "content": "hi"}]
+        )
+        print(f"  anthropic SDK real call: OK -- stop_reason={resp.stop_reason}")
+    except Exception as exc:
+        print(f"  anthropic SDK real call: FAILED -- {type(exc).__name__}: {exc!r}")
 
 
 def run_discord_bridge():
