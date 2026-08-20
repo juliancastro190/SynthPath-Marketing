@@ -3,8 +3,17 @@
 acts on an existing draft rather than taking fresh recipient/subject/body
 directly: sending only ever happens to something that was already saved
 and can be reviewed, never to text composed and dispatched in the same
-breath. It's plain SMTP (stdlib smtplib, no new dependency) so it works
-with whatever email account the user already has.
+breath.
+
+Originally plain SMTP (stdlib smtplib) — that turned out to be a dead
+end once this ran on Railway (Tier 10): live-tested, both Gmail's and
+iCloud's mail servers were unreachable on port 587 from that deployed
+instance ("Network is unreachable" / a hard timeout), while the exact
+same instance talks to Anthropic's API and Discord's gateway fine,
+because those are HTTPS. Cloud platforms commonly block outbound SMTP
+entirely as an anti-spam policy — no code fix works around that. Resend's
+API is plain HTTPS (via `requests`, no new dependency), so it works
+identically on a laptop or on Railway.
 
 send_email is in config.yaml's requires_confirmation list — sending a
 message is exactly the "never without asking first" case AGENT.md's
@@ -14,30 +23,22 @@ send anything unattended: griffin/heartbeat/checks.py's team_task declines
 every confirmation-gated call by default, this one included.
 """
 
-import smtplib
 from datetime import datetime, timezone
-from email.message import EmailMessage
 
-from griffin.config import SMTP_FROM_ADDRESS, SMTP_HOST, SMTP_PASSWORD, SMTP_PORT, SMTP_USERNAME
+import requests
+
+from griffin.config import RESEND_API_KEY, RESEND_FROM_ADDRESS
 from griffin.tools.drafts import get_draft, mark_sent
 from griffin.tools.registry import Tool, ToolError
 
+RESEND_API_URL = "https://api.resend.com/emails"
 
-def _require_smtp_config():
-    missing = [
-        name
-        for name, value in [
-            ("SMTP_HOST", SMTP_HOST),
-            ("SMTP_USERNAME", SMTP_USERNAME),
-            ("SMTP_PASSWORD", SMTP_PASSWORD),
-        ]
-        if not value
-    ]
-    if missing:
+
+def _require_resend_config():
+    if not RESEND_API_KEY:
         raise ToolError(
-            "Email sending isn't configured — missing "
-            + ", ".join(missing)
-            + " in .env (see .env.example for setup, including Gmail app-password steps)."
+            "Email sending isn't configured — missing RESEND_API_KEY in .env "
+            "(see .env.example for setup)."
         )
 
 
@@ -54,23 +55,35 @@ def send_email(tool_input):
     if not draft.get("recipient"):
         raise ToolError(f"Draft '{draft_id}' has no recipient. Update it (draft a new one with a recipient) before sending.")
 
-    _require_smtp_config()
+    _require_resend_config()
 
-    message = EmailMessage()
-    message["From"] = SMTP_FROM_ADDRESS
-    message["To"] = draft["recipient"]
-    message["Subject"] = draft.get("subject") or "(no subject)"
-    message.set_content(draft["body"])
-
+    payload = {
+        "from": RESEND_FROM_ADDRESS,
+        "to": [draft["recipient"]],
+        "subject": draft.get("subject") or "(no subject)",
+        "text": draft["body"],
+    }
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
-            server.starttls()
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.send_message(message)
-    except smtplib.SMTPException as exc:
-        raise ToolError(f"Sending failed: {exc}")
-    except OSError as exc:
-        raise ToolError(f"Couldn't reach the SMTP server ({SMTP_HOST}:{SMTP_PORT}): {exc}")
+        response = requests.post(
+            RESEND_API_URL,
+            json=payload,
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
+            timeout=15,
+        )
+    except requests.RequestException as exc:
+        raise ToolError(f"Couldn't reach Resend's API: {exc}")
+
+    if response.status_code >= 400:
+        # Resend's error responses are JSON with a "message" field when
+        # possible — most common cause here: RESEND_FROM_ADDRESS is the
+        # unverified-domain placeholder (onboarding@resend.dev) and the
+        # recipient isn't the address the Resend account itself is signed
+        # up with, which that placeholder can only send to.
+        try:
+            detail = response.json().get("message", response.text)
+        except ValueError:
+            detail = response.text
+        raise ToolError(f"Resend rejected the send ({response.status_code}): {detail[:300]}")
 
     sent_at = datetime.now(timezone.utc).isoformat()
     mark_sent(draft_id, sent_at)

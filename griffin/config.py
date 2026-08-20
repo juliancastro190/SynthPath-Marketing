@@ -53,20 +53,21 @@ HELICONE_BASE_URL = _env("HELICONE_BASE_URL", "https://anthropic.helicone.ai")
 REDDIT_CLIENT_ID = _env("REDDIT_CLIENT_ID")
 REDDIT_CLIENT_SECRET = _env("REDDIT_CLIENT_SECRET")
 
-# Tier 9 — the real send capability (griffin/tools/send.py). Plain SMTP,
-# not a third-party API: works with any provider (Gmail, Outlook, a
-# personal domain's mailbox), needs no new account, and uses only the
-# standard library (smtplib) — no new dependency. send_email is in
-# config.yaml's requires_confirmation list, same as any other "sends a
-# message" action; without these set, send_email raises a clear error
-# telling you to fill them in rather than silently failing.
-SMTP_HOST = _env("SMTP_HOST")
-SMTP_PORT = int(_env("SMTP_PORT", "587"))
-SMTP_USERNAME = _env("SMTP_USERNAME")
-SMTP_PASSWORD = _env("SMTP_PASSWORD")
-# Defaults to the login username — most providers require the From address
-# to match the authenticated account anyway. Override if yours differs.
-SMTP_FROM_ADDRESS = _env("SMTP_FROM_ADDRESS") or SMTP_USERNAME
+# Tier 9 — the real send capability (griffin/tools/send.py), via Resend's
+# HTTPS API. Originally plain SMTP — dropped after a live Tier 10 deploy
+# proved cloud platforms commonly block outbound SMTP entirely (both
+# Gmail's and iCloud's mail servers were unreachable from Railway on port
+# 587, while Anthropic's and Discord's APIs worked fine from the same
+# instance, because those are HTTPS). send_email is in config.yaml's
+# requires_confirmation list, same as any other "sends a message" action;
+# without RESEND_API_KEY set, send_email raises a clear error instead of
+# silently failing.
+RESEND_API_KEY = _env("RESEND_API_KEY")
+# Resend's own placeholder sender for accounts without a verified domain —
+# see .env.example for the real constraint this implies (can only send TO
+# the address your Resend account is signed up with, until you verify a
+# domain you own).
+RESEND_FROM_ADDRESS = _env("RESEND_FROM_ADDRESS", "onboarding@resend.dev")
 
 # Tier 10 — Discord bridge (griffin/discord_bridge.py, discord_main.py).
 # Lets you chat with Griffin from Discord (phone or desktop) instead of

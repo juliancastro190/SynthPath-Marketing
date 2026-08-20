@@ -376,7 +376,7 @@ normally and filing its own notice with the result.
 
 Drafting (Tier 2) always stopped at saving a draft — sending was
 deliberately out of scope until now. `send_email` (`griffin/tools/send.py`)
-sends a saved draft as a real email over plain SMTP:
+sends a saved draft as a real email over Resend's HTTPS API:
 
 ```
 You: draft an email to sam@example.com, subject "lunch?", body "free thursday?"
@@ -390,20 +390,25 @@ Proceed? [y/N]: y
   [send_email result: Sent to sam@example.com at 2026-... Subject: lunch?]
 ```
 
-Set up `SMTP_HOST`/`SMTP_USERNAME`/`SMTP_PASSWORD` in `.env` first — see
-`.env.example` for Gmail app-password steps (the common case) and other
-providers. `send_email` is in `config.yaml`'s `requires_confirmation`
-list, same as `forget` and `youtube_produce`; both Griffin directly and
-the marketing specialist can call it, always gated the same way.
+Set up `RESEND_API_KEY` in `.env` first — see `.env.example` for signup
+steps. `send_email` is in `config.yaml`'s `requires_confirmation` list,
+same as `forget` and `youtube_produce`; both Griffin directly and the
+marketing specialist can call it, always gated the same way.
 
 The interesting part is what this proves about Tier 8: since the
 heartbeat's confirmation-decline is generic (any gated tool, not a
 per-tool special case), a scheduled task can now genuinely attempt to
 send something on its own and correctly get blocked — verified with
-`input()` poisoned to raise if touched at all and `smtplib.SMTP` mocked
-to confirm no real send happened, only the gate's decline. I haven't sent
-a real email through a live SMTP account in this sandbox — that first
-real send is worth trying yourself once your `.env` is set up.
+`input()` poisoned to raise if touched at all and the Resend `requests.post`
+call mocked to confirm no real send happened, only the gate's decline.
+
+This started out as plain SMTP (stdlib `smtplib`), which worked fine
+locally — the switch to Resend came later, once Tier 10 put this on
+Railway and live testing showed outbound SMTP is blocked there entirely
+(both Gmail's and iCloud's mail servers were unreachable on port 587 from
+that deployed instance, while the same instance talks to Anthropic and
+Discord fine over HTTPS). Resend is HTTPS-based, so it works identically
+locally or deployed; see `griffin/tools/send.py` for the full story.
 
 ## Tier 10 — Discord bridge + hosting
 

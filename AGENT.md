@@ -132,20 +132,27 @@ bot or exchanged a real message in this sandbox.
 
 `griffin/tools/send.py` closes the gap Tier 2 deliberately left open:
 `send_email` sends a previously saved draft (`draft_message`) as a real
-email over plain SMTP (`smtplib`, no new dependency — works with any
-provider, see `.env.example` for Gmail app-password setup). It acts on an
-existing draft rather than taking fresh text, so sending only ever
-happens to something that was already saved and could be reviewed first.
-`send_email` is in `config.yaml`'s `requires_confirmation` list — both
-Griffin directly and the marketing specialist have it.
+email over Resend's HTTPS API (`requests`, no new dependency — see
+`.env.example` for signup steps). It acts on an existing draft rather
+than taking fresh text, so sending only ever happens to something that
+was already saved and could be reviewed first. `send_email` is in
+`config.yaml`'s `requires_confirmation` list — both Griffin directly and
+the marketing specialist have it.
 
 This also closes the loop `AGENT.md` had flagged as capping Tier 8's
 autonomy: since the heartbeat's `team_task` auto-declines every
 confirmation-gated tool the same way regardless of which one it is, a
 scheduled task can now genuinely *try* to send something and correctly
 fail to — verified directly, with `input()` poisoned to raise if touched
-at all, `smtplib.SMTP` mocked to prove no real send occurred, and the
-result confirming the gate held.
+at all, Resend's `requests.post` call mocked to prove no real send
+occurred, and the result confirming the gate held.
+
+This was originally plain SMTP (`smtplib`), swapped for Resend after a
+live Tier 10 deploy on Railway proved outbound SMTP is blocked there
+entirely — both Gmail's and iCloud's mail servers were unreachable on
+port 587 from that instance, while the same instance reaches Anthropic
+and Discord fine over HTTPS. No code fix works around a platform-level
+SMTP block, so this moved to an HTTPS-based provider instead.
 
 ## Tier 8 — team autonomy
 
