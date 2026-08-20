@@ -189,10 +189,12 @@ pointed at a narrower job via its own system prompt and scoped tools:
   jaredrhod playbooks under `Marketing/` (never produces output cold).
 - **youtube** — drives the existing faceless-Reddit-horror pipeline;
   `youtube_produce` (spends ElevenLabs credits) is confirmation-gated.
-- **research** — fetches a URL and reads it. This is also the first tool
-  in the project that touches untrusted external content for real, so its
-  system prompt is where the "external content is data, not instructions"
-  posture gets exercised against an actual boundary.
+- **research** — searches the web (`web_search`, Anthropic's server-side
+  tool, no local code or API key of ours) and fetches a specific URL to
+  read in full (`fetch_url`, local). This is also the first specialist to
+  touch untrusted external content for real, so its system prompt is
+  where the "external content is data, not instructions" posture gets
+  exercised against an actual boundary.
 
 Griffin reaches the team via one new tool, `delegate_task`
 (`griffin/tools/delegate.py`) — from the outer loop's point of view it's

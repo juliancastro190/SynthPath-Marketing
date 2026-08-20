@@ -33,18 +33,31 @@ class Tool:
 class ToolRegistry:
     def __init__(self):
         self._tools: dict[str, Tool] = {}
+        # Server tools (e.g. web_search) are Anthropic-hosted: the API
+        # executes them itself and returns the result inline in the same
+        # response, so there's no local handler and nothing for
+        # ConversationLoop._handle_tool_call to run — a server tool's
+        # result blocks never have type "tool_use", so the existing
+        # tool-call loop already skips over them without any changes.
+        # Declarations are raw dicts (e.g. {"type": "web_search_20260209",
+        # "name": "web_search"}), not Tool objects, since they have no
+        # input_schema/handler/describe of their own.
+        self._server_tools: list[dict] = []
 
     def register(self, tool: Tool):
         if tool.name in self._tools:
             raise ValueError(f"Tool '{tool.name}' is already registered.")
         self._tools[tool.name] = tool
 
+    def register_server_tool(self, declaration: dict):
+        self._server_tools.append(declaration)
+
     def to_anthropic_tools(self):
         """The registry rendered as the `tools` param the model sees each turn."""
         return [
             {"name": t.name, "description": t.description, "input_schema": t.input_schema}
             for t in self._tools.values()
-        ]
+        ] + self._server_tools
 
     def requires_confirmation(self, name):
         return self._tools[name].requires_confirmation

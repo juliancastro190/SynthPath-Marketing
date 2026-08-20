@@ -269,11 +269,15 @@ included) pointed at a narrower job:
   `griffin/youtube/story.py` — useful both when you want a made-up story
   and as a fallback when Reddit sourcing is blocked, and it sidesteps the
   reuse/permission question a retold Reddit story carries.
-- **research** — fetches a URL and reads it (`fetch_url`), the only tool
-  in the project that reads untrusted external content for real. Its
-  system prompt treats whatever a page says as data, never as
-  instructions — the same posture Tier 6 established for tool
-  results/memory, now exercised against an actual external source.
+- **research** — searches the web (`web_search`, Anthropic's server-side
+  tool — Anthropic runs the search itself, no API key or scraping code of
+  ours involved) and reads a specific page in full (`fetch_url`, a plain
+  local tool), the only specialist that reads untrusted external content
+  for real. Its system prompt treats whatever a page or search result
+  says as data, never as instructions — the same posture Tier 6
+  established for tool results/memory, now exercised against an actual
+  external source. Started as `fetch_url`-only (a URL had to already be
+  known); `web_search` closed that gap so a bare topic works too.
 
 There's no new command to run — Griffin decides on its own, mid-conversation,
 whether a task fits a specialist better than doing it directly, via one new
@@ -285,6 +289,8 @@ You: draft a subject line for a lead magnet email about a free onboarding checkl
 You: source a horror story from r/nosleep and write the narration script (don't render audio)
   [using tool: delegate_task({'specialist': 'youtube', 'task': '...'})]
 You: what does https://example.com say?
+  [using tool: delegate_task({'specialist': 'research', 'task': '...'})]
+You: what's the latest on [some topic]?
   [using tool: delegate_task({'specialist': 'research', 'task': '...'})]
 ```
 
@@ -299,9 +305,12 @@ I verified this directly with a stubbed model provider (no live API calls):
 a full orchestrator → specialist → orchestrator round trip through
 `delegate_task` returning the specialist's real final text, and the
 confirmation gate correctly blocking `youtube_produce` when declined from
-inside the nested loop. I haven't exercised `research`'s `fetch_url`
-against a live network call or the `marketing`/`youtube` specialists
-against a real model in this sandbox — the wiring is verified, the actual
+inside the nested loop, plus a mocked-provider check that the research
+specialist's `tools` payload actually includes the `web_search`
+declaration on a real delegated task. I haven't exercised `research`'s
+`fetch_url` or `web_search` against a live network call, or the
+`marketing`/`youtube` specialists against a real model, in this sandbox —
+the wiring is verified, the actual
 model judgment (which specialist to pick, whether the marketing agent
 reads the right playbook) is worth trying yourself once you have a working
 `ANTHROPIC_API_KEY`.
