@@ -17,6 +17,15 @@ tools:
   # prompt instead — there's no one to time out on when you're already
   # sitting at the keyboard answering it.
   confirmation_timeout_seconds: 30
+  # Same idea for the Discord bridge (Tier 10), deliberately its own,
+  # longer number rather than reusing confirmation_timeout_seconds above —
+  # that one's tuned for *speaking* a quick word in the middle of a live
+  # voice turn; this one's for noticing a phone notification, unlocking
+  # it, opening Discord, and typing a reply, which realistically takes
+  # longer. Hit live: 30s was consistently too short and every "yes"
+  # arrived just after the window had already closed and been read back
+  # as a new, out-of-context message instead.
+  discord_confirmation_timeout_seconds: 120
 
 heartbeat:
   poll_interval_seconds: 30

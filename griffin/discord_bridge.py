@@ -81,7 +81,9 @@ def run_discord_bridge():
     client = discord.Client(intents=intents)
 
     conversation = ConversationLoop()
-    confirmation_timeout = load_config().get("tools", {}).get("confirmation_timeout_seconds", 30)
+    # Deliberately its own config key, not voice's confirmation_timeout_seconds
+    # — see the comment on discord_confirmation_timeout_seconds in config.yaml.
+    confirmation_timeout = load_config().get("tools", {}).get("discord_confirmation_timeout_seconds", 120)
     awaiting_confirmation = threading.Event()
     confirm_replies = queue.Queue()
     message_queue = queue.Queue()
