@@ -35,7 +35,16 @@ def _get_client():
             raise ProviderError(
                 "No ANTHROPIC_API_KEY is set. Copy .env.example to .env and add your key."
             )
-        kwargs = {"api_key": ANTHROPIC_API_KEY}
+        kwargs = {
+            "api_key": ANTHROPIC_API_KEY,
+            # Explicit and generous rather than trusting the SDK default —
+            # a live deploy (a container on Railway) hit APIConnectionError
+            # on every call despite DNS and a raw HTTPS GET to the same
+            # host both succeeding, which smells like a connect handshake
+            # taking longer than expected in that specific network path
+            # rather than a real connectivity problem.
+            "timeout": 60.0,
+        }
         if HELICONE_API_KEY:
             # Proxy through Helicone instead of hitting Anthropic directly —
             # every request/response (including tool calls) then shows up
@@ -71,8 +80,15 @@ def run_turn(messages, system_prompt, tools=None, on_text=None):
             return stream.get_final_message()
     except anthropic.AuthenticationError:
         raise ProviderError("Authentication failed — check your ANTHROPIC_API_KEY.")
-    except anthropic.APIConnectionError:
-        raise ProviderError("Couldn't reach the model — check your connection and try again.")
+    except anthropic.APIConnectionError as exc:
+        # The SDK's own exception is often just "Connection error." with no
+        # further detail via str()/repr() — __cause__ is where httpx's
+        # actual underlying error (the real reason: DNS, TLS, timeout,
+        # refused) lives, when there is one. Surface it instead of only a
+        # generic message; a bare "check your connection" cost real
+        # debugging time once already when the connection was fine.
+        detail = f" ({exc.__cause__})" if exc.__cause__ else ""
+        raise ProviderError(f"Couldn't reach the model — check your connection and try again.{detail}")
     except anthropic.RateLimitError:
         raise ProviderError("The model is rate-limiting us — wait a moment and try again.")
     except anthropic.APIStatusError as exc:
