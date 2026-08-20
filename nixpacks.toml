@@ -11,9 +11,15 @@
 #
 # To deploy the heartbeat alone instead (no Discord chat), change both
 # lines below to requirements-heartbeat.txt and heartbeat_main.py.
+#
+# `python -m pip`, not bare `pip`: overriding this phase drops whatever
+# step Nixpacks' auto-detected Python provider normally uses to put a
+# `pip` binary on PATH, so a bare `pip install` 127s with "command not
+# found" even though python3 itself installed fine (see the `setup`
+# phase, which this file leaves alone).
 
 [phases.install]
-cmds = ["pip install -r requirements-discord.txt"]
+cmds = ["python -m pip install -r requirements-discord.txt"]
 
 [start]
 cmd = "python discord_main.py"
