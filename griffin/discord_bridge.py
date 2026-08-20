@@ -24,11 +24,9 @@ configurable per-message or bypassable.
 
 import asyncio
 import queue
-import socket
 import threading
 
 import discord
-import requests
 
 from griffin.brain.loop import ConversationLoop
 from griffin.brain.provider import ProviderError
@@ -63,55 +61,6 @@ def _chunks(text):
     return [text[i : i + _MAX_MESSAGE_CHARS] for i in range(0, len(text), _MAX_MESSAGE_CHARS)]
 
 
-def _network_diagnostic():
-    # Temporary — added to narrow down a live "can't reach the model"
-    # failure on a real deploy to a specific layer (DNS vs TCP/TLS vs
-    # something anthropic-SDK-specific) instead of guessing. Safe to
-    # remove once that's diagnosed.
-    print("Startup network diagnostic (api.anthropic.com):")
-    try:
-        ip = socket.gethostbyname("api.anthropic.com")
-        print(f"  DNS: OK -> {ip}")
-    except OSError as exc:
-        print(f"  DNS: FAILED -- {exc}")
-        return
-    try:
-        resp = requests.get("https://api.anthropic.com", timeout=10)
-        print(f"  requests HTTPS GET: OK -- status {resp.status_code}")
-    except requests.RequestException as exc:
-        print(f"  requests HTTPS GET: FAILED -- {type(exc).__name__}: {exc}")
-
-    # The anthropic SDK uses httpx, not requests -- a different HTTP
-    # client/network stack. Test it directly, since requests succeeding
-    # doesn't rule out something httpx-specific (HTTP/2 negotiation,
-    # connection pooling, a different default timeout).
-    try:
-        import httpx
-
-        resp = httpx.get("https://api.anthropic.com", timeout=10)
-        print(f"  httpx HTTPS GET: OK -- status {resp.status_code}")
-    except Exception as exc:
-        print(f"  httpx HTTPS GET: FAILED -- {type(exc).__name__}: {exc}")
-
-    # The real thing: a genuine minimal call through the exact client
-    # provider.py builds, with the real underlying exception printed in
-    # full — provider.py deliberately replaces it with a generic
-    # friendly message before it ever reaches here, which is exactly
-    # what's been hiding the actual cause so far.
-    try:
-        import anthropic
-
-        from griffin.config import ANTHROPIC_API_KEY, MODEL_NAME
-
-        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-        resp = client.messages.create(
-            model=MODEL_NAME, max_tokens=8, messages=[{"role": "user", "content": "hi"}]
-        )
-        print(f"  anthropic SDK real call: OK -- stop_reason={resp.stop_reason}")
-    except Exception as exc:
-        print(f"  anthropic SDK real call: FAILED -- {type(exc).__name__}: {exc!r}")
-
-
 def run_discord_bridge():
     if not DISCORD_BOT_TOKEN:
         raise DiscordBridgeError("No DISCORD_BOT_TOKEN set. Copy .env.example to .env and add your bot token.")
@@ -121,8 +70,6 @@ def run_discord_bridge():
         owner_id = int(DISCORD_OWNER_ID)
     except ValueError:
         raise DiscordBridgeError("DISCORD_OWNER_ID must be a numeric Discord user id, not a username.")
-
-    _network_diagnostic()
 
     print_startup_notices()
 
