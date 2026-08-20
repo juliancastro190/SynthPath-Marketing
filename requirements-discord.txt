@@ -1,0 +1,24 @@
+# Lean dependency set for the Discord-bridge deploy (see DEPLOY.md,
+# nixpacks.toml) — discord_main.py, which also runs the heartbeat.
+#
+# Deliberately excludes Tier 3's voice packages. Confirmed on a live
+# Nixpacks build attempt, not just static analysis: pynput pulls in
+# evdev, whose C extension needs Linux kernel headers
+# (linux/input.h/linux/input-event-codes.h) that Nixpacks' build image
+# doesn't have, and the build fails outright trying to compile it.
+# sounddevice was the one I originally expected to be the problem
+# (needs the PortAudio system library) — it turned out to install fine;
+# pynput/evdev is the actual blocker. Either way, neither package, nor
+# deepgram-sdk, is reachable from discord_main.py's import chain at all
+# (verified via static import-graph analysis), so excluding all three
+# costs nothing.
+#
+# For local, full-featured use (voice included), use requirements.txt
+# instead — this file is deploy-only.
+
+anthropic>=0.40.0
+python-dotenv>=1.0.0
+pyyaml>=6.0
+requests>=2.31.0
+elevenlabs>=1.0.0
+discord.py>=2.3.0

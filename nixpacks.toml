@@ -2,17 +2,33 @@
 # starts the heartbeat in the background (one process, one shared data/
 # volume, instead of two separate deployments with diverging state).
 #
-# Only the start command is overridden here. An earlier version of this
-# file also overrode [phases.install] to use a lean, deploy-specific
-# requirements file (avoiding Tier 3's voice packages, which aren't
-# reachable from discord_main.py's import chain at all) — but that broke
-# the build ("No module named pip"): overriding the install phase drops
-# whatever step Nixpacks' auto-detected Python provider normally uses to
-# set pip up, even though a live build on this exact platform, fully
-# auto-detected with no nixpacks.toml involved, installed the complete
-# requirements.txt (voice packages included) without any problem. So:
-# don't fight what's already proven to work — let Nixpacks auto-manage
-# setup and install, override only the one thing that actually needs it.
+# History, so the next edit doesn't repeat these: a bare `pip install -r
+# requirements-discord.txt` override failed with "command not found" —
+# overriding [phases.install] drops the venv Nixpacks' own Python
+# provider normally creates, and the bare Nix python3 package has no pip
+# on PATH. `python -m pip install ...` failed too, differently ("No
+# module named pip") — that Nix python3 package doesn't bundle pip at
+# all, not just miss it on PATH. Dropping the override entirely and
+# letting Nixpacks fully auto-manage install (against the *full*
+# requirements.txt) then failed for a real reason: pynput pulls in evdev,
+# whose C extension needs Linux kernel headers this build image doesn't
+# have, and the build fails compiling it outright — not reachable from
+# discord_main.py's import chain at all, so no reason to pay that cost.
+#
+# The fix that actually works: reproduce Nixpacks' own successful
+# pattern (`python -m venv --copies /opt/venv && pip install ...`, seen
+# directly in a build log) explicitly, by full path, rather than either
+# fighting it or trusting an override to inherit its setup automatically.
+#
+# To deploy the heartbeat alone instead (no Discord chat), change both
+# requirements-discord.txt to requirements-heartbeat.txt and
+# discord_main.py to heartbeat_main.py below.
+
+[phases.install]
+cmds = [
+  "python -m venv --copies /opt/venv",
+  "/opt/venv/bin/pip install -r requirements-discord.txt",
+]
 
 [start]
-cmd = "python discord_main.py"
+cmd = "/opt/venv/bin/python discord_main.py"

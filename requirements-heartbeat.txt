@@ -1,0 +1,15 @@
+# Lean dependency set for hosting only the heartbeat (griffin/heartbeat/),
+# no Discord chat — see DEPLOY.md. Same reasoning as requirements-discord.txt:
+# Tier 3's voice packages aren't reachable from heartbeat_main.py's import
+# chain at all, and including pynput specifically breaks the build outright
+# on Nixpacks (its evdev dependency needs Linux kernel headers the build
+# image doesn't have) — not just unnecessary, actually build-breaking.
+#
+# For local, full-featured use (voice included), use requirements.txt
+# instead — this file is deploy-only.
+
+anthropic>=0.40.0
+python-dotenv>=1.0.0
+pyyaml>=6.0
+requests>=2.31.0
+elevenlabs>=1.0.0

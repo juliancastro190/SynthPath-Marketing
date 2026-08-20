@@ -73,13 +73,13 @@ SSH.
    survive restarts/redeploys instead of resetting every time): service →
    **Settings** → **Volumes** → **New Volume** → mount path `/app/data`.
 7. Railway should already be reading `nixpacks.toml` from this repo to
-   run `python discord_main.py` as the start command (everything else —
-   installing `requirements.txt`, setting up Python — is Nixpacks' own
-   auto-detected default, left alone deliberately; overriding it broke
-   the build on a live attempt). If the logs show it running `main.py`
+   install `requirements-discord.txt` into a venv and run
+   `discord_main.py` — see the comment in that file for why it's built
+   this specific way (two earlier, simpler attempts each failed
+   differently on a live deploy). If the logs show it running `main.py`
    instead, check **Settings → Source** that the connected branch is
    correct, not `main` (this repo builds from a feature branch until it's
-   merged) — that's what caused it here.
+   merged) — that's what caused it the first time here.
 8. **Deploy.** Watch **Deployments → View Logs** — you should see
    `Starting heartbeat in the background...` then
    `Griffin Discord bridge ready — logged in as ...`.
@@ -95,7 +95,8 @@ same data, no migration needed.
 
 ### Deploying the heartbeat alone instead (no Discord)
 
-Change `nixpacks.toml`'s start command to `python heartbeat_main.py`.
+Change `nixpacks.toml`'s two `requirements-discord.txt`/`discord_main.py`
+references to `requirements-heartbeat.txt`/`heartbeat_main.py`.
 
 ## Turning it off
 
