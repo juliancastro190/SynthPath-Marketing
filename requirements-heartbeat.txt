@@ -1,0 +1,18 @@
+# Lean dependency set for hosting only the heartbeat (griffin/heartbeat/),
+# e.g. on Railway — see DEPLOY.md. This deliberately excludes Tier 3's
+# voice packages (deepgram-sdk, sounddevice, pynput): they need real audio
+# hardware / a display and aren't reachable from heartbeat_main.py's
+# import chain at all, so installing them on a headless server risks
+# failing the build (sounddevice needs the PortAudio system library) for
+# no benefit. elevenlabs is still needed even though youtube_produce can
+# never actually complete unattended (Tier 8's confirmation-decline blocks
+# it) — griffin/youtube/voice.py imports it at module load time regardless.
+#
+# For local, full-featured use (voice included), use requirements.txt
+# instead — this file is deploy-only.
+
+anthropic>=0.40.0
+python-dotenv>=1.0.0
+pyyaml>=6.0
+requests>=2.31.0
+elevenlabs>=1.0.0
