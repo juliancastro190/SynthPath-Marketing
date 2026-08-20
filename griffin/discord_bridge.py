@@ -24,9 +24,11 @@ configurable per-message or bypassable.
 
 import asyncio
 import queue
+import socket
 import threading
 
 import discord
+import requests
 
 from griffin.brain.loop import ConversationLoop
 from griffin.brain.provider import ProviderError
@@ -61,6 +63,25 @@ def _chunks(text):
     return [text[i : i + _MAX_MESSAGE_CHARS] for i in range(0, len(text), _MAX_MESSAGE_CHARS)]
 
 
+def _network_diagnostic():
+    # Temporary — added to narrow down a live "can't reach the model"
+    # failure on a real deploy to a specific layer (DNS vs TCP/TLS vs
+    # something anthropic-SDK-specific) instead of guessing. Safe to
+    # remove once that's diagnosed.
+    print("Startup network diagnostic (api.anthropic.com):")
+    try:
+        ip = socket.gethostbyname("api.anthropic.com")
+        print(f"  DNS: OK -> {ip}")
+    except OSError as exc:
+        print(f"  DNS: FAILED -- {exc}")
+        return
+    try:
+        resp = requests.get("https://api.anthropic.com", timeout=10)
+        print(f"  HTTPS GET: OK -- status {resp.status_code}")
+    except requests.RequestException as exc:
+        print(f"  HTTPS GET: FAILED -- {type(exc).__name__}: {exc}")
+
+
 def run_discord_bridge():
     if not DISCORD_BOT_TOKEN:
         raise DiscordBridgeError("No DISCORD_BOT_TOKEN set. Copy .env.example to .env and add your bot token.")
@@ -70,6 +91,8 @@ def run_discord_bridge():
         owner_id = int(DISCORD_OWNER_ID)
     except ValueError:
         raise DiscordBridgeError("DISCORD_OWNER_ID must be a numeric Discord user id, not a username.")
+
+    _network_diagnostic()
 
     print_startup_notices()
 
