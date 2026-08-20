@@ -85,6 +85,48 @@ before starting work in a new session.
 - [x] Tier 7 — Team: specialist agents Griffin can delegate to
 - [x] Tier 8 — Team autonomy: a specialist can run on a schedule, no one asking
 - [x] Tier 9 — Send: a real, confirmation-gated send_email tool
+- [x] Tier 10 — Discord bridge + always-on hosting
+
+## Tier 10 — Discord bridge + hosting
+
+Griffin can now be reached from outside a local terminal.
+`griffin/discord_bridge.py` (`discord_main.py`) chats over Discord DMs —
+same brain as `main.py`, same confirmation gate, just a different way in
+and out, exactly like Tier 3's voice mode. It also starts the heartbeat
+in a background thread itself, so `discord_main.py` deployed once (see
+`DEPLOY.md`, Railway) gives both remote chat and Tier 8's autonomy from
+one process sharing one `data/` volume — the alternative (heartbeat and
+chat as two separate deployments) would mean two divergent `data/`
+directories, which was flagged as a real cost when Tier 8 was first
+deployed alone.
+
+Security is a single hard boundary: the bridge only ever responds to a
+direct message from the exact Discord user id in `DISCORD_OWNER_ID`;
+every other user and every non-DM message is silently ignored. Anyone who
+could reach it could spend Anthropic credits or trigger `send_email`, so
+this isn't configurable per-message.
+
+The interesting engineering problem: `discord.py`'s event handlers run on
+an asyncio event loop, but `ConversationLoop.send()` is a plain blocking
+call — the exact mismatch Tier 3's `voice_cli.py` already solved for
+push-to-talk. Same fix, adapted: every DM is handed to a single worker
+thread (not one thread per message, so two DMs sent close together can't
+race on the shared `ConversationLoop`'s history), and `on_confirm` blocks
+that thread on a queue that `on_message` fills when the next DM arrives
+while a confirmation is pending. Sending a Discord message from that
+worker thread goes through `asyncio.run_coroutine_threadsafe` rather than
+touching the event loop directly.
+
+Verified two ways: real discord.py API calls (`Intents`, `Client`,
+`DMChannel`) construct correctly against the actual library, not a mock;
+and, since discord.py itself can't connect to a live gateway from this
+sandbox, the concurrency pattern specifically — a real background asyncio
+event loop (not discord.py, just `asyncio` directly) standing in for
+`client.loop`, driving a full confirmation round trip end to end (prompt
+sent, thread blocks, next "message" arrives, correctly routed to the
+confirmation queue not a new turn, parsed, tool result relayed) — no
+deadlock, correct routing. I have not connected this to a live Discord
+bot or exchanged a real message in this sandbox.
 
 ## Tier 9 — send
 
@@ -154,5 +196,5 @@ of a conversation.
 ## What's left for a fuller build (not started)
 
 - SMS/text sending — send_email (Tier 9) covers email only.
-- A visual face, an always-on host, more specialists — see "Where to go
-  after the baseline" in the original build doc.
+- A visual face, more specialists — see "Where to go after the baseline"
+  in the original build doc.

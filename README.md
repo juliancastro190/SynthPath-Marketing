@@ -405,6 +405,46 @@ to confirm no real send happened, only the gate's decline. I haven't sent
 a real email through a live SMTP account in this sandbox — that first
 real send is worth trying yourself once your `.env` is set up.
 
+## Tier 10 — Discord bridge + hosting
+
+You're no longer limited to a local terminal. `discord_main.py` chats
+with Griffin over Discord DMs — same brain, same tools, same
+confirmation gate as `main.py` — and starts the heartbeat in the
+background at the same time, so one deploy (see `DEPLOY.md`, Railway)
+gets you both remote chat and Tier 8's scheduled autonomy from a single
+process sharing one persistent volume.
+
+Setup: `.env.example`'s "Tier 10" section walks through creating a
+Discord bot (developer portal → bot token → enable Message Content
+Intent → invite it to a private server) and finding your own Discord
+user id — that id is the *only* one the bridge will ever respond to;
+everyone else, and anything outside a DM, is silently ignored, since
+whoever can reach it can spend your Anthropic credits or trigger
+`send_email`.
+
+```
+You (in Discord): draft an email to sam@example.com, subject "lunch?"
+Griffin: Draft saved [id=a1b2c3d4] — nothing has been sent. ...
+You: send it
+Griffin: Griffin wants to: send this email to sam@example.com: "lunch?"
+         Reply yes or no.
+You: yes
+Griffin: [confirmed]
+         Sent to sam@example.com at 2026-... Subject: lunch?
+```
+
+The engineering problem worth knowing about: discord.py's event handling
+is asyncio-based, but `ConversationLoop.send()` blocks — the same
+mismatch `voice_cli.py` already solved for push-to-talk (a worker thread
+per turn, `on_confirm` blocking on a queue that fills when your next
+message arrives). I verified the real discord.py API surface I'm using
+constructs correctly against the actual library, and separately verified
+the concurrency pattern itself end-to-end — a real background asyncio
+event loop standing in for discord.py's, driving a full confirmation
+round trip with no deadlock and correct message routing. I have not
+connected this to a live Discord bot in this sandbox; that first real
+`/DM` is worth watching closely.
+
 ---
 
 Digital Marketing Platform

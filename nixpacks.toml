@@ -1,13 +1,19 @@
-# Deploy build config for hosting the heartbeat (see DEPLOY.md) — Nixpacks
-# would otherwise auto-detect Python and run `pip install -r
+# Deploy build config — see DEPLOY.md. Runs the Discord bridge, which also
+# starts the heartbeat in the background (one process, one shared data/
+# volume, instead of two separate deployments with diverging state).
+#
+# Nixpacks would otherwise auto-detect Python and run `pip install -r
 # requirements.txt`, which includes Tier 3's voice packages (sounddevice
 # needs the PortAudio system library; pynput needs a display). Neither is
-# reachable from heartbeat_main.py's actual import chain, so this
-# explicitly overrides the install phase to use the lean,
-# deploy-specific requirements file instead.
+# reachable from discord_main.py's actual import chain, so this
+# explicitly overrides the install phase to use the lean, deploy-specific
+# requirements file instead.
+#
+# To deploy the heartbeat alone instead (no Discord chat), change both
+# lines below to requirements-heartbeat.txt and heartbeat_main.py.
 
 [phases.install]
-cmds = ["pip install -r requirements-heartbeat.txt"]
+cmds = ["pip install -r requirements-discord.txt"]
 
 [start]
-cmd = "python heartbeat_main.py"
+cmd = "python discord_main.py"

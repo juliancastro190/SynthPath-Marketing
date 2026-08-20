@@ -49,3 +49,12 @@ SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
 # Defaults to the login username — most providers require the From address
 # to match the authenticated account anyway. Override if yours differs.
 SMTP_FROM_ADDRESS = os.environ.get("SMTP_FROM_ADDRESS") or SMTP_USERNAME
+
+# Tier 10 — Discord bridge (griffin/discord_bridge.py, discord_main.py).
+# Lets you chat with Griffin from Discord (phone or desktop) instead of
+# only a local terminal. DISCORD_OWNER_ID is the only allowlisted user —
+# the bridge ignores every message from anyone else, and every message
+# outside a DM with you, as a hard security boundary (anyone who could
+# reach it could spend your Anthropic credits or trigger send_email).
+DISCORD_BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
+DISCORD_OWNER_ID = os.environ.get("DISCORD_OWNER_ID")
