@@ -2,24 +2,17 @@
 # starts the heartbeat in the background (one process, one shared data/
 # volume, instead of two separate deployments with diverging state).
 #
-# Nixpacks would otherwise auto-detect Python and run `pip install -r
-# requirements.txt`, which includes Tier 3's voice packages (sounddevice
-# needs the PortAudio system library; pynput needs a display). Neither is
-# reachable from discord_main.py's actual import chain, so this
-# explicitly overrides the install phase to use the lean, deploy-specific
-# requirements file instead.
-#
-# To deploy the heartbeat alone instead (no Discord chat), change both
-# lines below to requirements-heartbeat.txt and heartbeat_main.py.
-#
-# `python -m pip`, not bare `pip`: overriding this phase drops whatever
-# step Nixpacks' auto-detected Python provider normally uses to put a
-# `pip` binary on PATH, so a bare `pip install` 127s with "command not
-# found" even though python3 itself installed fine (see the `setup`
-# phase, which this file leaves alone).
-
-[phases.install]
-cmds = ["python -m pip install -r requirements-discord.txt"]
+# Only the start command is overridden here. An earlier version of this
+# file also overrode [phases.install] to use a lean, deploy-specific
+# requirements file (avoiding Tier 3's voice packages, which aren't
+# reachable from discord_main.py's import chain at all) — but that broke
+# the build ("No module named pip"): overriding the install phase drops
+# whatever step Nixpacks' auto-detected Python provider normally uses to
+# set pip up, even though a live build on this exact platform, fully
+# auto-detected with no nixpacks.toml involved, installed the complete
+# requirements.txt (voice packages included) without any problem. So:
+# don't fight what's already proven to work — let Nixpacks auto-manage
+# setup and install, override only the one thing that actually needs it.
 
 [start]
 cmd = "python discord_main.py"
