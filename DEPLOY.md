@@ -61,17 +61,21 @@ SSH.
    REDDIT_CLIENT_ID=...
    REDDIT_CLIENT_SECRET=...
    ```
-   You do **not** need `ELEVENLABS_API_KEY` or `RESEND_API_KEY` for the
-   heartbeat's own scheduled tasks — anything that would use them
-   (`youtube_produce`, `send_email`) always requires your explicit yes,
-   which you *can* now give from Discord if you want that to actually
-   work when you approve it live; add them if so, skip them if you're
-   fine with the heartbeat only ever declining those unattended (it
-   always will regardless — this only affects whether a *live Discord*
-   approval of one of those tools can actually complete). Note
-   `send_email` specifically needs Resend, not SMTP — plain SMTP doesn't
-   work from Railway at all (outbound SMTP is blocked at the platform
-   level; see `griffin/tools/send.py` for how this was discovered).
+   You do **not** need `ELEVENLABS_API_KEY`, `RESEND_API_KEY`, or the
+   `YOUTUBE_*` publisher variables for the heartbeat's own scheduled tasks
+   — anything that would use them (`youtube_produce`, `send_email`,
+   `publish_youtube_video`) always requires your explicit yes, which you
+   *can* now give from Discord if you want that to actually work when you
+   approve it live; add them if so, skip them if you're fine with the
+   heartbeat only ever declining those unattended (it always will
+   regardless — this only affects whether a *live Discord* approval of
+   one of those tools can actually complete). Note `send_email`
+   specifically needs Resend, not SMTP — plain SMTP doesn't work from
+   Railway at all (outbound SMTP is blocked at the platform level; see
+   `griffin/tools/send.py` for how this was discovered). `YOUTUBE_
+   REFRESH_TOKEN` has to come from running `youtube_auth.py` locally
+   first (it needs a browser) — see `.env.example`'s Tier 11 section —
+   then paste the result in here as a Railway variable.
 6. **Add a persistent volume** (so scheduling state, drafts, and memory
    survive restarts/redeploys instead of resetting every time): service →
    **Settings** → **Volumes** → **New Volume** → mount path `/app/data`.

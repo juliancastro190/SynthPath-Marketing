@@ -7,6 +7,7 @@ the team yet, that's a later step.
 """
 
 from griffin.agents.marketing import build_marketing_agent
+from griffin.agents.publisher import build_publisher_agent
 from griffin.agents.research import build_research_agent
 from griffin.agents.youtube import build_youtube_agent
 
@@ -15,6 +16,7 @@ def build_team(config=None):
     agents = [
         build_marketing_agent(config),
         build_youtube_agent(config),
+        build_publisher_agent(config),
         build_research_agent(config),
     ]
     return {agent.name: agent for agent in agents}

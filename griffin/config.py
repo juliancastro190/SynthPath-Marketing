@@ -77,3 +77,16 @@ RESEND_FROM_ADDRESS = _env("RESEND_FROM_ADDRESS", "onboarding@resend.dev")
 # reach it could spend your Anthropic credits or trigger send_email).
 DISCORD_BOT_TOKEN = _env("DISCORD_BOT_TOKEN")
 DISCORD_OWNER_ID = _env("DISCORD_OWNER_ID")
+
+# Tier 11 — the publisher specialist's YouTube upload (griffin/youtube/
+# upload.py), via the YouTube Data API v3. A plain API key can't authorize
+# uploading a video to a channel — this needs OAuth2 user consent, done
+# once via youtube_auth.py (run locally, opens a browser) to mint
+# YOUTUBE_REFRESH_TOKEN; every upload after that refreshes it silently, no
+# browser involved, which is what lets this run headlessly (Railway, the
+# heartbeat) and not just from an interactive terminal. publish_youtube_
+# video is in config.yaml's requires_confirmation list regardless — see
+# griffin/agents/publisher.py.
+YOUTUBE_CLIENT_ID = _env("YOUTUBE_CLIENT_ID")
+YOUTUBE_CLIENT_SECRET = _env("YOUTUBE_CLIENT_SECRET")
+YOUTUBE_REFRESH_TOKEN = _env("YOUTUBE_REFRESH_TOKEN")

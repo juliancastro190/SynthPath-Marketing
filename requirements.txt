@@ -12,3 +12,8 @@ pynput>=1.7.6
 
 # Tier 10 — Discord bridge
 discord.py>=2.3.0
+
+# Tier 11 — publisher (YouTube upload via the YouTube Data API v3)
+google-api-python-client>=2.100.0
+google-auth>=2.23.0
+google-auth-oauthlib>=1.1.0

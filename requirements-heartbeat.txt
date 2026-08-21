@@ -13,3 +13,10 @@ python-dotenv>=1.0.0
 pyyaml>=6.0
 requests>=2.31.0
 elevenlabs>=1.0.0
+
+# Tier 11 — publisher (griffin/youtube/upload.py). Only google-auth +
+# google-api-python-client — google-auth-oauthlib is youtube_auth.py's
+# one-time interactive browser-consent flow, deliberately run locally
+# only (see that file), never reachable from anything this deploys.
+google-api-python-client>=2.100.0
+google-auth>=2.23.0

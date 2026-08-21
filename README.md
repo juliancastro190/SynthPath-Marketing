@@ -250,8 +250,8 @@ answer ever comes.
 ## Tier 7 — the team
 
 Griffin is now the orchestrator of a small team rather than a solo
-assistant. Three specialists live under `griffin/agents/`, each the same
-brain as Griffin (conversation loop + tool registry, confirmation gate
+assistant. Specialists live under `griffin/agents/`, each the same brain
+as Griffin (conversation loop + tool registry, confirmation gate
 included) pointed at a narrower job:
 
 - **marketing** — writes copy, campaigns, emails, and funnel strategy,
@@ -269,6 +269,12 @@ included) pointed at a narrower job:
   `griffin/youtube/story.py` — useful both when you want a made-up story
   and as a fallback when Reddit sourcing is blocked, and it sidesteps the
   reuse/permission question a retold Reddit story carries.
+- **publisher** (Tier 11) — uploads a video `youtube` already produced to
+  a real YouTube channel. Kept separate from `youtube` on purpose: it
+  only ever acts on a `story_id` that already exists on disk, so a task
+  that only asks for a script or draft video can never accidentally reach
+  the publish path. `publish_youtube_video` is confirmation-gated and
+  defaults to a private upload.
 - **research** — searches the web (`web_search`, Anthropic's server-side
   tool — Anthropic runs the search itself, no API key or scraping code of
   ours involved) and reads a specific page in full (`fetch_url`, a plain
@@ -458,6 +464,58 @@ event loop standing in for discord.py's, driving a full confirmation
 round trip with no deadlock and correct message routing. I have not
 connected this to a live Discord bot in this sandbox; that first real
 `/DM` is worth watching closely.
+
+## Tier 11 — publisher
+
+The youtube specialist (Tier 7) produces a finished video and stops —
+nothing puts it online. `publisher` (`griffin/agents/publisher.py`,
+`griffin/youtube/upload.py`) closes that gap: `publish_youtube_video`
+uploads an already-produced video to YouTube via the YouTube Data API v3.
+Deliberately its own specialist rather than a third tool bolted onto
+`youtube` — producing content and putting it live for the world to see
+are different levels of consequence, and separating them means a task
+that only asks for a script or a draft video can never accidentally reach
+the publish path.
+
+```
+You: publish the story from data/youtube/a1b2c3d4
+  [using tool: delegate_task({'specialist': 'publisher', 'task': '...'})]
+Griffin wants to: upload the video from story 'a1b2c3d4' to YouTube as private
+Proceed? [y/N]: y
+  [confirmed]
+Griffin: Published to YouTube (private): https://youtu.be/xyz789
+         Title: A Very Spooky Title
+```
+
+Like `send_email` and `youtube_produce`, `publish_youtube_video` is in
+`config.yaml`'s `requires_confirmation` list — putting something on a
+real channel, visible to whoever's watching it, is exactly the "never
+without asking" case those two already established. On top of that gate
+it also defaults to `privacyStatus: private` unless a task explicitly
+asks for `unlisted` or `public`, so even an approved publish lands
+somewhere reviewable before it's actually visible to anyone else.
+
+A plain API key can't authorize a video upload — YouTube requires OAuth2
+user consent. `youtube_auth.py` (repo root) is a one-time, interactive
+setup script: run it locally, it opens a browser for you to sign in and
+consent, then prints a refresh token to add to `.env` — see
+`.env.example`'s Tier 11 section for the full Google Cloud project setup
+and the one real rough edge (a Google Cloud OAuth app left in the default
+"Testing" status has refresh tokens that expire after 7 days; re-running
+`youtube_auth.py` occasionally is the realistic tradeoff for personal use
+rather than going through Google's app verification process).
+
+I verified this with a mocked upload call: missing/unknown `story_id`,
+a story with no `video.mp4` yet (i.e. only `youtube_draft` was run),
+invalid `privacy_status`, the default-private/derived-title path, every
+override, an upload failure surfacing as a normal tool error, the
+confirmation gate actually being set on this tool, and — same check every
+confirmation-gated tool gets — that a heartbeat-triggered publish
+declines without ever calling the upload function. I haven't exercised
+this against a live YouTube channel or the real OAuth flow in this
+sandbox; that first real upload, and `youtube_auth.py`'s browser consent
+step, are worth trying yourself once you've set up a Google Cloud
+project.
 
 ## Prompt caching (faster, cheaper — no tier of its own)
 

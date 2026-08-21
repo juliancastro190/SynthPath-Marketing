@@ -86,6 +86,44 @@ before starting work in a new session.
 - [x] Tier 8 — Team autonomy: a specialist can run on a schedule, no one asking
 - [x] Tier 9 — Send: a real, confirmation-gated send_email tool
 - [x] Tier 10 — Discord bridge + always-on hosting
+- [x] Tier 11 — Publisher: a confirmation-gated YouTube upload tool
+
+## Tier 11 — publisher
+
+The youtube specialist (Tier 7) produces a finished video and stops —
+nothing puts it online. `publisher` (`griffin/agents/publisher.py`,
+`griffin/youtube/upload.py`) closes that gap: `publish_youtube_video`
+uploads an already-produced video to YouTube via the YouTube Data API v3.
+Its own specialist rather than a third tool on `youtube` — producing
+content and putting it live are different levels of consequence, and
+separating them means a task that only asks for a script or draft video
+can never accidentally reach the publish path.
+
+`publish_youtube_video` is in `config.yaml`'s `requires_confirmation`
+list, same as `send_email` and `youtube_produce` — the same "never
+without asking" case AGENT.md's original interview called out, now
+applied to a public channel instead of a private inbox. On top of that
+gate it also defaults to `privacyStatus: private` unless a task
+explicitly asks for `unlisted` or `public`, a second layer of safety on
+top of the confirmation itself.
+
+A plain API key can't authorize a video upload — this needs OAuth2 user
+consent, done once via `youtube_auth.py` (repo root, run locally — it
+opens a browser) to mint a refresh token; every upload after that
+refreshes it silently, which is what lets this run from Railway or the
+heartbeat and not just an interactive terminal. See `.env.example`'s
+Tier 11 section for the Google Cloud project setup and the one real rough
+edge: a Google Cloud OAuth app left in "Testing" status (the simplest
+setup) has refresh tokens that expire after 7 days.
+
+Verified with a mocked upload call: missing/unknown `story_id`, no
+`video.mp4` yet, invalid `privacy_status`, the default-private/derived-
+title path and every override, an upload failure surfacing as a normal
+tool error, the confirmation gate actually being set, and — same check
+every confirmation-gated tool gets — a heartbeat-triggered publish
+declining without ever calling the upload function. I haven't exercised
+this against a live YouTube channel or the real OAuth flow in this
+sandbox.
 
 ## Tier 10 — Discord bridge + hosting
 
@@ -189,6 +227,8 @@ pointed at a narrower job via its own system prompt and scoped tools:
   jaredrhod playbooks under `Marketing/` (never produces output cold).
 - **youtube** — drives the existing faceless-Reddit-horror pipeline;
   `youtube_produce` (spends ElevenLabs credits) is confirmation-gated.
+- **publisher** (Tier 11) — uploads a video `youtube` already produced to
+  YouTube; also confirmation-gated, and private by default.
 - **research** — searches the web (`web_search`, Anthropic's server-side
   tool, no local code or API key of ours) and fetches a specific URL to
   read in full (`fetch_url`, local). This is also the first specialist to
