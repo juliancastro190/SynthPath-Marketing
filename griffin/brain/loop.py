@@ -98,6 +98,18 @@ separate CLI/IDE coding agent product — also built on Claude, but not the
 same thing as you — don't conflate the two if asked."""
 
 
+def _cached_block(text):
+    # A cache_control breakpoint on a system block caches everything up to
+    # and including it — tools then system, in that render order — so this
+    # one breakpoint covers the (fairly large, and byte-identical from one
+    # turn to the next) tool schema list plus the stable prompt text, at
+    # ~90% off and with a real latency win on the next turn that reuses it.
+    # Anthropic's cache is keyed on exact content, not on which
+    # ConversationLoop asked, so a specialist's fixed prompt gets the same
+    # benefit across separate delegate_task calls, not just within one.
+    return {"type": "text", "text": text, "cache_control": {"type": "ephemeral"}}
+
+
 def _memory_section():
     facts = memory.list_facts()
     if not facts:
@@ -113,10 +125,21 @@ def _memory_section():
 
 
 def build_system_prompt():
-    """The system prompt, freshly assembled from the current memory store.
-    Called at the start of every turn so a fact learned a moment ago (or
-    edited by hand in data/memory.json) is always reflected."""
-    return BASE_SYSTEM_PROMPT + _memory_section()
+    """The system prompt, freshly assembled from the current memory store,
+    as a list of content blocks rather than one string. Called at the
+    start of every turn so a fact learned a moment ago (or edited by hand
+    in data/memory.json) is always reflected.
+
+    BASE_SYSTEM_PROMPT is its own cached block (see _cached_block) since
+    it's identical turn to turn; the memory section is a separate,
+    uncached block appended after it, so a fact being added or edited
+    mid-conversation doesn't bust that cached prefix on every later turn
+    — only the small volatile tail gets reprocessed."""
+    blocks = [_cached_block(BASE_SYSTEM_PROMPT)]
+    memory_section = _memory_section()
+    if memory_section:
+        blocks.append({"type": "text", "text": memory_section})
+    return blocks
 
 
 class ConversationLoop:
@@ -133,7 +156,7 @@ class ConversationLoop:
     @property
     def system_prompt(self):
         if self._fixed_system_prompt is not None:
-            return self._fixed_system_prompt
+            return [_cached_block(self._fixed_system_prompt)]
         return build_system_prompt()
 
     @property
@@ -175,7 +198,13 @@ class ConversationLoop:
                     {"role": "assistant", "content": serialize_content_blocks(final.content)}
                 )
                 if final.usage:
-                    audit.log_model_usage(MODEL_NAME, final.usage.input_tokens, final.usage.output_tokens)
+                    audit.log_model_usage(
+                        MODEL_NAME,
+                        final.usage.input_tokens,
+                        final.usage.output_tokens,
+                        cache_creation_input_tokens=getattr(final.usage, "cache_creation_input_tokens", 0) or 0,
+                        cache_read_input_tokens=getattr(final.usage, "cache_read_input_tokens", 0) or 0,
+                    )
 
                 if final.stop_reason != "tool_use":
                     return

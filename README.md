@@ -459,6 +459,37 @@ round trip with no deadlock and correct message routing. I have not
 connected this to a live Discord bot in this sandbox; that first real
 `/DM` is worth watching closely.
 
+## Prompt caching (faster, cheaper — no tier of its own)
+
+Every turn used to send Griffin's full system prompt and tool list fresh —
+tool descriptions plus everything in `BASE_SYSTEM_PROMPT`
+(`griffin/brain/loop.py`), byte-identical from one turn to the next but
+fully reprocessed anyway. `build_system_prompt()` now returns that stable
+part as its own cache-marked block (`_cached_block`, using Anthropic's
+prompt caching — a `cache_control: {type: "ephemeral"}` breakpoint, which
+covers everything before and including it: the tool list, then this
+block, in that render order); the memory section is a second, uncached
+block appended after it, so a fact learned mid-conversation doesn't bust
+the cached prefix for every later turn. The same wrapping applies to
+every specialist's fixed system prompt (`ConversationLoop.system_prompt`),
+so a delegated task benefits too — Anthropic's cache is keyed on exact
+content, not on which `ConversationLoop` asked, so it hits across
+separate `delegate_task` calls, not just within one conversation. Net
+effect: repeat turns reuse the cached prefix at roughly a tenth the input
+cost and noticeably faster time-to-first-token, with no change to model
+choice or response quality. `griffin/audit.py`'s cost tracking now
+accounts for cache write/read tokens too (their own, different rates) so
+`data/cost.json` stays an accurate running total instead of quietly
+under-counting once caching kicked in.
+
+I verified this with a mocked provider: the request payload really does
+carry `system` as a block list with the breakpoint set, a specialist's
+fixed prompt gets wrapped the same way, and the cost math for cache
+write/read tokens matches Anthropic's published multipliers. I haven't
+measured the real latency/cost delta against a live account in this
+sandbox — that's the number worth watching in `data/cost.json` yourself
+after a few real conversations.
+
 ---
 
 Digital Marketing Platform

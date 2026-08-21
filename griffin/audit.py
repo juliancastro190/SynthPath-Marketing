@@ -27,6 +27,26 @@ _PRICES_PER_MTOK = {
 }
 _FALLBACK_PRICE = {"input": 3.0, "output": 15.0}
 
+# Prompt caching (griffin/brain/loop.py's _cached_block) has its own
+# rates, as a standard multiple of the base input price: writing a new
+# cache entry costs more than a normal input token (1.25x for the
+# ephemeral/5-minute TTL used here — Anthropic also offers a pricier 1h
+# TTL at 2x, not used in this project), reading a cache hit is far
+# cheaper (0.1x). Without these, cost tracking would silently under-count
+# once caching kicked in — cache tokens arrive on their own usage fields,
+# separate from input_tokens, so ignoring them isn't a wash, it's a gap.
+_CACHE_WRITE_MULTIPLIER = 1.25
+_CACHE_READ_MULTIPLIER = 0.1
+
+_EMPTY_COST_TOTALS = {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "estimated_cost_usd": 0.0,
+    "calls": 0,
+}
+
 
 def _append(entry):
     os.makedirs(storage.DATA_DIR, exist_ok=True)
@@ -58,15 +78,22 @@ def log_heartbeat_notice(check_name, message, severity):
     _append({"type": "heartbeat_notice", "check_name": check_name, "severity": severity, "message": message})
 
 
-def log_model_usage(model, input_tokens, output_tokens):
+def log_model_usage(model, input_tokens, output_tokens, cache_creation_input_tokens=0, cache_read_input_tokens=0):
     price = _PRICES_PER_MTOK.get(model, _FALLBACK_PRICE)
-    cost = (input_tokens / 1_000_000) * price["input"] + (output_tokens / 1_000_000) * price["output"]
-
-    totals = storage.load(
-        COST_FILENAME, {"input_tokens": 0, "output_tokens": 0, "estimated_cost_usd": 0.0, "calls": 0}
+    cost = (
+        (input_tokens / 1_000_000) * price["input"]
+        + (output_tokens / 1_000_000) * price["output"]
+        + (cache_creation_input_tokens / 1_000_000) * price["input"] * _CACHE_WRITE_MULTIPLIER
+        + (cache_read_input_tokens / 1_000_000) * price["input"] * _CACHE_READ_MULTIPLIER
     )
+
+    totals = storage.load(COST_FILENAME, _EMPTY_COST_TOTALS.copy())
     totals["input_tokens"] += input_tokens
     totals["output_tokens"] += output_tokens
+    # .get(..., 0) rather than a plain key lookup: a cost.json written
+    # before caching existed won't have these two keys yet.
+    totals["cache_creation_input_tokens"] = totals.get("cache_creation_input_tokens", 0) + cache_creation_input_tokens
+    totals["cache_read_input_tokens"] = totals.get("cache_read_input_tokens", 0) + cache_read_input_tokens
     totals["estimated_cost_usd"] = round(totals["estimated_cost_usd"] + cost, 6)
     totals["calls"] += 1
     storage.save(COST_FILENAME, totals)
@@ -77,6 +104,8 @@ def log_model_usage(model, input_tokens, output_tokens):
             "model": model,
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,
+            "cache_creation_input_tokens": cache_creation_input_tokens,
+            "cache_read_input_tokens": cache_read_input_tokens,
             "estimated_cost_usd": round(cost, 6),
             "running_total_usd": totals["estimated_cost_usd"],
         }
@@ -84,6 +113,4 @@ def log_model_usage(model, input_tokens, output_tokens):
 
 
 def running_cost():
-    return storage.load(
-        COST_FILENAME, {"input_tokens": 0, "output_tokens": 0, "estimated_cost_usd": 0.0, "calls": 0}
-    )
+    return storage.load(COST_FILENAME, _EMPTY_COST_TOTALS.copy())
